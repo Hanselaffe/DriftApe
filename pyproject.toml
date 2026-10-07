@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "driftape"
+version = "0.1.0"
+description = "A local defensive Windows security configuration/state drift utility."
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.13,<2",
+    "pytest>=8,<9",
+    "pytest-cov>=5,<7",
+    "ruff>=0.8,<1",
+]
+
+[project.scripts]
+driftape = "driftape.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["driftape*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["driftape"]

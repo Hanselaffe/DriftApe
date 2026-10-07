@@ -2,7 +2,7 @@ name: Finalize DriftApe v0.1.0 release
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited]
 
 permissions:
   contents: write

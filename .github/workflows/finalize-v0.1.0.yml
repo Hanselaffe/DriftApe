@@ -1,8 +1,7 @@
 name: Finalize DriftApe v0.1.0 release
 
 on:
-  issues:
-    types: [opened, edited]
+  create:
 
 permissions:
   contents: write
@@ -10,7 +9,7 @@ permissions:
 
 jobs:
   finalize:
-    if: github.event.issue.title == '[release-automation] DriftApe v0.1.0'
+    if: github.event.ref_type == 'branch' && github.event.ref == 'release-trigger-v0.1.0'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
@@ -154,7 +153,7 @@ EOF_NOTES
           git commit -m "Remove v0.1.0 release staging [skip ci]"
           git push origin HEAD:main
 
-      - name: Close trigger issue
+      - name: Remove trigger branch
         shell: bash
         run: |
-          gh issue close "${{ github.event.issue.number }}" --repo "$GITHUB_REPOSITORY" --reason completed
+          git push origin --delete release-trigger-v0.1.0

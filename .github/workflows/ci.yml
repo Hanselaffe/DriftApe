@@ -2,8 +2,6 @@ name: CI
 
 on:
   push:
-    paths-ignore:
-      - ".driftape-release/READY"
   pull_request:
 
 permissions:

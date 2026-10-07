@@ -1,0 +1,160 @@
+name: Finalize DriftApe v0.1.0 release
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  finalize:
+    if: github.event.issue.title == '[release-automation] DriftApe v0.1.0'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_COMMIT: d7ab09d845b7c0a6479e0dee25365e1766275852
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify release asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd .driftape-release
+          sha256sum -c DriftApe-v0.1.0.zip.sha256
+
+      - name: Create or verify v0.1.0 tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force
+          if git show-ref --verify --quiet refs/tags/v0.1.0; then
+            actual="$(git rev-list -n 1 v0.1.0)"
+            test "$actual" = "$TARGET_COMMIT"
+          else
+            git tag -a v0.1.0 "$TARGET_COMMIT" -m "DriftApe v0.1.0"
+            git push origin refs/tags/v0.1.0
+          fi
+
+      - name: Prepare release notes
+        shell: bash
+        run: |
+          cat > /tmp/DriftApe_GITHUB_RELEASE_NOTES_v0.1.0.md <<'EOF_NOTES'
+# DriftApe v0.1.0
+
+Initial public release of DriftApe.
+
+DriftApe is a local, defensive, read-only, CLI-first Windows security configuration and state drift
+utility. It records a local baseline, collects a later snapshot, verifies baseline integrity,
+compares covered security-relevant state, and produces deterministic change findings and reports.
+
+## Included in v0.1.0
+
+- Local users and local Administrators membership
+- Windows services
+- Scheduled Tasks
+- Microsoft Defender exclusions
+- Defender `DisableRealtimeMonitoring`
+- Defender `RealTimeProtectionEnabled`
+- Versioned baseline/current snapshots
+- SHA-256 baseline integrity verification
+- Coverage-aware diffing across seven logical domains
+- Security interpretation findings
+- JSON change reports
+- Terminal summaries
+- `baseline`, `scan`, and `diff` CLI commands
+- Synthetic public examples
+- Windows CI for Python 3.12 and 3.13
+
+## Requirements
+
+- Windows x64
+- 64-bit Python 3.12 or 3.13
+- No runtime dependencies outside the Python standard library
+
+## Validation
+
+The accepted v0.1 release completed:
+
+```text
+Windows integration: 9/9 PASS
+Unit regression:     807/807 PASS
+Windows full suite:  816/816 PASS
+Skipped tests:       0
+Runtime dependencies: []
+```
+
+The public-release hardening regression also completed with 807/807 unit tests passing and the
+expected Windows-only integration skips on a non-Windows verification runtime.
+
+## Important scope boundaries
+
+DriftApe v0.1.0 is **not**:
+
+- an EDR
+- an antivirus product
+- a malware scanner
+- a pentesting framework
+- a remediation tool
+
+It does not provide remote operation, continuous monitoring, a background service, a web UI, cloud
+backend, vulnerability scanning, YARA, event-log/Sysmon/ETW collection, or Windows Server
+certification.
+
+## Baseline integrity note
+
+DriftApe verifies baseline bytes against an adjacent SHA-256 manifest. This detects modification
+when the manifest remains trustworthy, but it does not authenticate the baseline against an attacker
+who can alter both files.
+
+## License
+
+Apache License 2.0.
+EOF_NOTES
+
+      - name: Create or update GitHub Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v0.1.0 >/dev/null 2>&1; then
+            gh release edit v0.1.0 --title "DriftApe v0.1.0" --notes-file /tmp/DriftApe_GITHUB_RELEASE_NOTES_v0.1.0.md
+            gh release upload v0.1.0 .driftape-release/DriftApe-v0.1.0.zip .driftape-release/DriftApe-v0.1.0.zip.sha256 --clobber
+          else
+            gh release create v0.1.0 .driftape-release/DriftApe-v0.1.0.zip .driftape-release/DriftApe-v0.1.0.zip.sha256 --verify-tag --title "DriftApe v0.1.0" --notes-file /tmp/DriftApe_GITHUB_RELEASE_NOTES_v0.1.0.md
+          fi
+
+      - name: Try repository metadata
+        continue-on-error: true
+        shell: bash
+        run: |
+          gh repo edit "$GITHUB_REPOSITORY" \
+            --description "Local, defensive, read-only Windows security configuration and state drift detection CLI." \
+            --add-topic windows-security \
+            --add-topic configuration-drift \
+            --add-topic defensive-security \
+            --add-topic python \
+            --add-topic powershell \
+            --add-topic cli \
+            --add-topic security-monitoring \
+            --add-topic baseline
+
+      - name: Remove temporary release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -r .driftape-release
+          git rm .github/workflows/finalize-v0.1.0.yml
+          git commit -m "Remove v0.1.0 release staging [skip ci]"
+          git push origin HEAD:main
+
+      - name: Close trigger issue
+        shell: bash
+        run: |
+          gh issue close "${{ github.event.issue.number }}" --repo "$GITHUB_REPOSITORY" --reason completed

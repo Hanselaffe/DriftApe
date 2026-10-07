@@ -1,7 +1,9 @@
 name: Finalize DriftApe v0.1.0 release
 
 on:
-  create:
+  push:
+    paths:
+      - ".driftape-release/READY"
 
 permissions:
   contents: write
@@ -9,7 +11,6 @@ permissions:
 
 jobs:
   finalize:
-    if: github.event.ref_type == 'branch' && github.event.ref == 'release-trigger-v0.1.0'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
@@ -148,6 +149,7 @@ EOF_NOTES
         shell: bash
         run: |
           set -euo pipefail
+          git checkout "$TARGET_COMMIT" -- .github/workflows/ci.yml
           git rm -r .driftape-release
           git rm .github/workflows/finalize-v0.1.0.yml
           git commit -m "Remove v0.1.0 release staging [skip ci]"

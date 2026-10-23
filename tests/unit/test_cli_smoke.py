@@ -16,7 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_package_version() -> None:
-    assert driftape.__version__ == "0.1.0"
+    assert driftape.__version__ == "0.2.0.dev0"
 
 
 def test_cli_version_returns_success(capsys: pytest.CaptureFixture[str]) -> None:
@@ -24,7 +24,7 @@ def test_cli_version_returns_success(capsys: pytest.CaptureFixture[str]) -> None
     captured = capsys.readouterr()
 
     assert exit_code == 0
-    assert captured.out == "DriftApe 0.1.0\n"
+    assert captured.out == "DriftApe 0.2.0.dev0\n"
     assert captured.err == ""
 
 
@@ -38,7 +38,7 @@ def test_python_module_uses_same_cli_entry_point() -> None:
     )
 
     assert result.returncode == 0
-    assert result.stdout == "DriftApe 0.1.0\n"
+    assert result.stdout == "DriftApe 0.2.0.dev0\n"
     assert result.stderr == ""
 
 

@@ -1,0 +1,46 @@
+name: WP4 baseline-relative quality evidence (not global green)
+
+on:
+  push:
+    branches:
+      - verify/p2-wp4-ci-quality-closure-20261023
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-quality-differential:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - name: Checkout candidate and isolated WP4 CI harness
+        uses: actions/checkout@v4
+        with:
+          path: candidate
+      - name: Checkout accepted WP2 reference (read-only)
+        uses: actions/checkout@v4
+        with:
+          ref: verify/p2-wp4-wp2-reference-20261023
+          path: baseline
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install exact verification tool versions
+        run: python -m pip install "pytest==8.4.2" "ruff==0.17.0" "mypy==1.20.2"
+      - name: Install accepted WP3 candidate
+        run: python -m pip install --no-deps -e ./candidate
+      - name: Compare quality diagnostics with pinned WP2
+        run: |
+          python candidate/.github/scripts/wp4_quality_differential.py --baseline baseline --candidate candidate --manifest candidate/.github/wp4_quality_manifest.json --output quality-evidence/${{ matrix.python-version }}
+      - name: Upload preserved quality logs and skip reasons
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wp4-quality-evidence-python-${{ matrix.python-version }}
+          path: quality-evidence/${{ matrix.python-version }}/
+          if-no-files-found: warn

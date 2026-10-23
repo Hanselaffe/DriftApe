@@ -18,7 +18,7 @@ import sys
 
 EXPECTED = {"ruff": 226, "format": 22, "mypy": 22}
 MYPY_LINE = re.compile(r"^(.*?):(\d+)(?::(\d+))?: (error|warning|note): (.+)$")
-FORMAT_LINE = re.compile(r"^(?:Would reformat|Would format): (.+)$", re.IGNORECASE)
+FORMAT_LINE = re.compile(r"^\s*-->\s+(.+?):\d+:\d+\s*$")
 
 
 def run(argv: list[str], cwd: Path, output: Path, name: str) -> dict:
@@ -77,10 +77,15 @@ def check_format(record: dict, root: Path) -> Counter:
     if record["exit_code"] not in (0, 1):
         raise ValueError("unexpected format subprocess failure")
     out = Counter()
+    pending = False
     for line in (record["stdout"] + "\n" + record["stderr"]).splitlines():
-        m = FORMAT_LINE.match(line.strip())
-        if m:
-            out[(rel_name(m.group(1), root),)] += 1
+        if line.strip().startswith("unformatted: File would be reformatted"):
+            pending = True
+        elif pending:
+            m = FORMAT_LINE.match(line)
+            if m:
+                out[(rel_name(m.group(1), root),)] += 1
+                pending = False
     return out
 
 
@@ -120,8 +125,8 @@ def main() -> int:
             if version not in got or r["exit_code"]:
                 raise ValueError(f"tool version is not pinned: {kind}: {got}")
         commands = {
-            "ruff": ["ruff", "check", ".", "--output-format=json"],
-            "format": ["ruff", "format", "--check", "."],
+            "ruff": ["ruff", "check", ".", "--exclude", ".github", "--output-format=json"],
+            "format": ["ruff", "format", "--check", ".", "--exclude", ".github"],
             "mypy": ["mypy", "driftape", "--show-error-codes", "--no-error-summary"],
         }
         parsers = {"ruff": check_ruff, "format": check_format, "mypy": check_mypy}

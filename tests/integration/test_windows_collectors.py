@@ -583,7 +583,7 @@ def test_wp14_cli_baseline_scan_diff_real_host(tmp_path: Path, capsys: pytest.Ca
     if changes_root.get("schema_version") != CHANGE_SCHEMA_VERSION:
         _fail("changes JSON root schema is not driftape.changes.v1")
 
-    if not diff_io.out.startswith("DriftApe 0.1.0\n"):
+    if not diff_io.out.startswith("DriftApe 0.2.0.dev0\n"):
         _fail("diff stdout is not the accepted human terminal summary")
     if diff_io.out.lstrip().startswith("{") or '"schema_version"' in diff_io.out:
         _fail("diff stdout contains serialized JSON")

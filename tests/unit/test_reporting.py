@@ -139,7 +139,7 @@ def test_canonical_root_and_nested_keys_are_exact() -> None:
         "summary",
     }
     assert mapping["schema_version"] == CHANGE_SCHEMA_VERSION == "driftape.changes.v1"
-    assert mapping["tool_version"] == TOOL_VERSION == "0.1.0"
+    assert mapping["tool_version"] == TOOL_VERSION == "0.2.0.dev0"
     assert set(mapping["baseline"]) == {"path", "sha256", "collected_at_utc"}  # type: ignore[arg-type]
     assert set(mapping["current"]) == {"path", "collected_at_utc"}  # type: ignore[arg-type]
     assert set(mapping["comparison"]) == {  # type: ignore[arg-type]
@@ -389,7 +389,7 @@ def test_exact_representative_canonical_json_bytes() -> None:
         b'"current":{"collected_at_utc":"2026-08-27T09:30:00Z","path":"current.json"},'
         b'"findings":[{"change_ids":["c1"],"domain":"users.local_users","finding_id":"f1","message":"A local user account was added and should be reviewed.","rule_id":"DA-USR-001","severity":"MEDIUM","title":"Local user added"}],'
         b'"generated_at_utc":"2026-08-27T10:00:00Z","schema_version":"driftape.changes.v1",'
-        b'"summary":{"changes":1,"findings":1,"severity":{"HIGH":0,"INFO":0,"LOW":0,"MEDIUM":1}},"tool_version":"0.1.0"}\n'
+        b'"summary":{"changes":1,"findings":1,"severity":{"HIGH":0,"INFO":0,"LOW":0,"MEDIUM":1}},"tool_version":"0.2.0.dev0"}\n'
     )
     assert serialize_report(_report()) == expected
 
@@ -453,7 +453,7 @@ def test_complete_terminal_summary_exact_golden_text() -> None:
         findings=findings,
     )
     expected = (
-        "DriftApe 0.1.0\n"
+        "DriftApe 0.2.0.dev0\n"
         "\n"
         "Baseline integrity: VERIFIED\n"
         "Comparison: COMPLETE\n"

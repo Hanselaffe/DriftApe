@@ -147,7 +147,7 @@ def test_baseline_calls_exact_kind_and_writes_default_pair(
     assert (tmp_path / "baseline.json").read_bytes() == serialize_snapshot(snapshot)
     assert (tmp_path / "baseline.manifest.json").is_file()
     captured = capsys.readouterr()
-    assert "DriftApe 0.1.0" in captured.out
+    assert "DriftApe 0.2.0.dev0" in captured.out
     assert "Output: baseline.json" in captured.out
     assert "Manifest: baseline.manifest.json" in captured.out
     assert "Collection: COMPLETE" in captured.out
@@ -411,7 +411,9 @@ def test_diff_real_pipeline_no_changes_exact_report_and_summary(
     assert report_mapping["comparison"]["status"] == "complete"
     assert report_mapping["changes"] == []
     captured = capsys.readouterr()
-    assert captured.out.startswith("DriftApe 0.1.0\n\nBaseline integrity: VERIFIED\n")
+    assert captured.out.startswith(
+        "DriftApe 0.2.0.dev0\n\nBaseline integrity: VERIFIED\n"
+    )
     assert f"Output: {output_path}\n" in captured.out
     assert "{" not in captured.out
     assert captured.err == ""

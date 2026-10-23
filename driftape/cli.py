@@ -40,6 +40,13 @@ from driftape.reporting import (
     render_terminal_summary,
     serialize_report,
 )
+from driftape.reporting.html_report import render_html
+from driftape.reporting.json_reader import (
+    InvalidStoredReportError,
+    ReportReadError,
+    UnsupportedReportSchemaError,
+    load_change_report,
+)
 from driftape.rules import InvalidRuleInputError, evaluate_changes
 from driftape.serialization import SnapshotSerializationError, serialize_snapshot
 from driftape.snapshot import SnapshotCollectionError, collect_snapshot
@@ -94,6 +101,13 @@ def _build_parser() -> argparse.ArgumentParser:
     diff.add_argument("CURRENT")
     diff.add_argument("--output", default="changes.json", metavar="PATH")
     diff.add_argument("--force", action="store_true")
+
+    report = subparsers.add_parser(
+        "report", help="render a stored change report as offline html"
+    )
+    report.add_argument("CHANGES")
+    report.add_argument("--output", default="changes.html", metavar="PATH")
+    report.add_argument("--force", action="store_true")
 
     return parser
 
@@ -347,6 +361,38 @@ def _run_diff(
     return 1 if diff_result.changes else 0
 
 
+def _run_report(changes_label: str, output_label: str, force: bool) -> int:
+    changes_path = Path(changes_label)
+    output_path = Path(output_label)
+
+    try:
+        loaded = load_change_report(changes_path)
+        # Resolve symlinks and other path aliases, then also reject hard links.
+        # Even --force must never replace or overwrite a report input alias.
+        if changes_path.resolve() == output_path.resolve() or (
+            output_path.exists() and os.path.samefile(changes_path, output_path)
+        ):
+            raise _OutputIOError("report output aliases the input file")
+        html_bytes = render_html(loaded)
+        _preflight_output((output_path,), force)
+        _atomic_write_bytes(output_path, html_bytes)
+    except UnsupportedReportSchemaError as exc:
+        _print_error(str(exc))
+        return 5
+    except InvalidStoredReportError as exc:
+        _print_error(str(exc))
+        return 6
+    except (ReportReadError, _OutputIOError) as exc:
+        _print_error(str(exc))
+        return 3
+    except Exception as exc:
+        _print_error(f"operational failure: {exc}")
+        return 3
+
+    print(f"Report written: {output_path}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the frozen DriftApe v0.1 CLI dispatcher."""
     parser = _build_parser()
@@ -362,6 +408,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_scan(args.output, args.force)
     if args.command == "diff":
         return _run_diff(args.BASELINE, args.CURRENT, args.output, args.force)
+    if args.command == "report":
+        return _run_report(args.CHANGES, args.output, args.force)
 
     parser.print_help()
     return 0

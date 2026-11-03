@@ -5,8 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import tempfile
-from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,16 +15,14 @@ import driftape.cli as cli_module
 from driftape.constants import SNAPSHOT_SCHEMA_VERSION
 from driftape.diff import (
     Change,
-    ChangeType,
     ComparisonStatus,
     DiffResult,
-    DiffSchemaMismatchError,
     HostMismatchError,
     InvalidDiffInputError,
 )
 from driftape.integrity import (
-    BaselineIOError,
     BaselineIntegrityError,
+    BaselineIOError,
     BaselineSchemaMismatchError,
     InvalidBaselineSnapshotError,
     InvalidManifestError,
@@ -54,7 +51,7 @@ from driftape.models import (
     UsersData,
 )
 from driftape.platform_windows import UnsupportedPlatformError
-from driftape.reporting import build_report, serialize_report
+from driftape.reporting import build_report
 from driftape.serialization import serialize_snapshot, snapshot_to_mapping
 from driftape.snapshot import SnapshotCollectionError
 
@@ -67,7 +64,7 @@ def _snapshot(
     timestamp: datetime | None = None,
 ) -> Snapshot:
     if timestamp is None:
-        timestamp = datetime(2026, 8, 28, 10, 11, 12, tzinfo=timezone.utc)
+        timestamp = datetime(2026, 8, 28, 10, 11, 12, tzinfo=UTC)
     users = UsersCollectorResult(
         status=CollectorStatus.SUCCESS,
         coverage=frozenset({"local_users", "administrators"}),
@@ -140,14 +137,16 @@ def test_baseline_calls_exact_kind_and_writes_default_pair(
     snapshot = _snapshot(SnapshotKind.BASELINE)
     calls: list[SnapshotKind] = []
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(cli_module, "collect_snapshot", lambda kind: calls.append(kind) or snapshot)
+    monkeypatch.setattr(
+        cli_module, "collect_snapshot", lambda kind: calls.append(kind) or snapshot
+    )
 
     assert cli_module.main(["baseline"]) == 0
     assert calls == [SnapshotKind.BASELINE]
     assert (tmp_path / "baseline.json").read_bytes() == serialize_snapshot(snapshot)
     assert (tmp_path / "baseline.manifest.json").is_file()
     captured = capsys.readouterr()
-    assert "DriftApe 0.1.0" in captured.out
+    assert "DriftApe 0.2.0.dev0" in captured.out
     assert "Output: baseline.json" in captured.out
     assert "Manifest: baseline.manifest.json" in captured.out
     assert "Collection: COMPLETE" in captured.out
@@ -185,7 +184,9 @@ def test_baseline_no_force_conflict_is_precollection_and_untouched(
     manifest = derive_baseline_manifest_path(output)
     target = output if conflict == "baseline" else manifest
     target.write_bytes(b"original")
-    monkeypatch.setattr(cli_module, "collect_snapshot", lambda _kind: pytest.fail("collected"))
+    monkeypatch.setattr(
+        cli_module, "collect_snapshot", lambda _kind: pytest.fail("collected")
+    )
 
     assert cli_module.main(["baseline", "--output", str(output)]) == 3
     assert target.read_bytes() == b"original"
@@ -194,7 +195,9 @@ def test_baseline_no_force_conflict_is_precollection_and_untouched(
     assert captured.err
 
 
-def test_baseline_force_replaces_pair(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_baseline_force_replaces_pair(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     output = tmp_path / "gold.json"
     output.write_bytes(b"old")
     derive_baseline_manifest_path(output).write_bytes(b"old-manifest")
@@ -218,7 +221,10 @@ def test_baseline_partial_writes_and_exits_2(
 
 @pytest.mark.parametrize(
     ("exc", "code"),
-    ((UnsupportedPlatformError("unsupported"), 8), (SnapshotCollectionError("fatal"), 3)),
+    (
+        (UnsupportedPlatformError("unsupported"), 8),
+        (SnapshotCollectionError("fatal"), 3),
+    ),
 )
 def test_baseline_collection_error_mapping_no_pair(
     tmp_path: Path,
@@ -228,7 +234,9 @@ def test_baseline_collection_error_mapping_no_pair(
     code: int,
 ) -> None:
     output = tmp_path / "baseline.json"
-    monkeypatch.setattr(cli_module, "collect_snapshot", lambda _kind: (_ for _ in ()).throw(exc))
+    monkeypatch.setattr(
+        cli_module, "collect_snapshot", lambda _kind: (_ for _ in ()).throw(exc)
+    )
     assert cli_module.main(["baseline", "--output", str(output)]) == code
     assert not output.exists()
     assert not derive_baseline_manifest_path(output).exists()
@@ -237,12 +245,16 @@ def test_baseline_collection_error_mapping_no_pair(
     assert captured.err
 
 
-def test_baseline_io_error_maps_3(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_baseline_io_error_maps_3(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     monkeypatch.setattr(
         cli_module, "collect_snapshot", lambda _kind: _snapshot(SnapshotKind.BASELINE)
     )
     monkeypatch.setattr(
-        cli_module, "write_baseline_path", lambda *_args: (_ for _ in ()).throw(BaselineIOError("io"))
+        cli_module,
+        "write_baseline_path",
+        lambda *_args: (_ for _ in ()).throw(BaselineIOError("io")),
     )
     assert cli_module.main(["baseline", "--output", "x.json"]) == 3
     captured = capsys.readouterr()
@@ -256,7 +268,9 @@ def test_scan_exact_kind_bytes_no_manifest(
     output = tmp_path / "now.json"
     snapshot = _snapshot(SnapshotKind.CURRENT)
     calls: list[SnapshotKind] = []
-    monkeypatch.setattr(cli_module, "collect_snapshot", lambda kind: calls.append(kind) or snapshot)
+    monkeypatch.setattr(
+        cli_module, "collect_snapshot", lambda kind: calls.append(kind) or snapshot
+    )
     assert cli_module.main(["scan", "--output", str(output)]) == 0
     assert calls == [SnapshotKind.CURRENT]
     assert output.read_bytes() == serialize_snapshot(snapshot)
@@ -269,12 +283,16 @@ def test_scan_exact_kind_bytes_no_manifest(
 
 def test_scan_default_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(cli_module, "collect_snapshot", lambda _kind: _snapshot(SnapshotKind.CURRENT))
+    monkeypatch.setattr(
+        cli_module, "collect_snapshot", lambda _kind: _snapshot(SnapshotKind.CURRENT)
+    )
     assert cli_module.main(["scan"]) == 0
     assert (tmp_path / "current.json").is_file()
 
 
-def test_scan_conflict_and_force(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_scan_conflict_and_force(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     output = tmp_path / "current.json"
     output.write_bytes(b"old")
     snapshot = _snapshot(SnapshotKind.CURRENT)
@@ -294,7 +312,9 @@ def test_scan_conflict_and_force(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert output.read_bytes() == serialize_snapshot(snapshot)
 
 
-def test_scan_partial_still_writes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_scan_partial_still_writes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     output = tmp_path / "current.json"
     snapshot = _snapshot(SnapshotKind.CURRENT, complete=False)
     monkeypatch.setattr(cli_module, "collect_snapshot", lambda _kind: snapshot)
@@ -304,13 +324,18 @@ def test_scan_partial_still_writes(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 
 @pytest.mark.parametrize(
     ("exc", "code"),
-    ((UnsupportedPlatformError("unsupported"), 8), (SnapshotCollectionError("fatal"), 3)),
+    (
+        (UnsupportedPlatformError("unsupported"), 8),
+        (SnapshotCollectionError("fatal"), 3),
+    ),
 )
 def test_scan_collection_error_mapping(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, exc: Exception, code: int
 ) -> None:
     output = tmp_path / "current.json"
-    monkeypatch.setattr(cli_module, "collect_snapshot", lambda _kind: (_ for _ in ()).throw(exc))
+    monkeypatch.setattr(
+        cli_module, "collect_snapshot", lambda _kind: (_ for _ in ()).throw(exc)
+    )
     assert cli_module.main(["scan", "--output", str(output)]) == code
     assert not output.exists()
 
@@ -318,9 +343,13 @@ def test_scan_collection_error_mapping(
 def test_scan_filesystem_failure_maps_3(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(cli_module, "collect_snapshot", lambda _kind: _snapshot(SnapshotKind.CURRENT))
     monkeypatch.setattr(
-        cli_module, "_atomic_write_bytes", lambda *_args: (_ for _ in ()).throw(cli_module._OutputIOError("write"))
+        cli_module, "collect_snapshot", lambda _kind: _snapshot(SnapshotKind.CURRENT)
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "_atomic_write_bytes",
+        lambda *_args: (_ for _ in ()).throw(cli_module._OutputIOError("write")),
     )
     assert cli_module.main(["scan", "--output", str(tmp_path / "x.json")]) == 3
     captured = capsys.readouterr()
@@ -363,7 +392,9 @@ def test_current_loader_schema_mismatch(tmp_path: Path) -> None:
         cli_module._load_current_path(path)
 
 
-@pytest.mark.parametrize("mutation", ("missing", "wrong_type", "baseline_kind", "pretty"))
+@pytest.mark.parametrize(
+    "mutation", ("missing", "wrong_type", "baseline_kind", "pretty")
+)
 def test_current_loader_rejects_invalid_or_noncanonical(
     tmp_path: Path, mutation: str
 ) -> None:
@@ -371,13 +402,19 @@ def test_current_loader_rejects_invalid_or_noncanonical(
     mapping = snapshot_to_mapping(_snapshot(SnapshotKind.CURRENT))
     if mutation == "missing":
         del mapping["host"]
-        data = json.dumps(mapping, separators=(",", ":"), sort_keys=True).encode() + b"\n"
+        data = (
+            json.dumps(mapping, separators=(",", ":"), sort_keys=True).encode() + b"\n"
+        )
     elif mutation == "wrong_type":
         mapping["host"] = "bad"
-        data = json.dumps(mapping, separators=(",", ":"), sort_keys=True).encode() + b"\n"
+        data = (
+            json.dumps(mapping, separators=(",", ":"), sort_keys=True).encode() + b"\n"
+        )
     elif mutation == "baseline_kind":
         mapping["snapshot_kind"] = "baseline"
-        data = json.dumps(mapping, separators=(",", ":"), sort_keys=True).encode() + b"\n"
+        data = (
+            json.dumps(mapping, separators=(",", ":"), sort_keys=True).encode() + b"\n"
+        )
     else:
         data = json.dumps(mapping, indent=2, sort_keys=True).encode() + b"\n"
     path.write_bytes(data)
@@ -399,19 +436,31 @@ def test_diff_real_pipeline_no_changes_exact_report_and_summary(
     baseline = _baseline_pair(baseline_path)
     _current_file(current_path)
 
-    assert cli_module.main(
-        ["diff", str(baseline_path), str(current_path), "--output", str(output_path)]
-    ) == 0
+    assert (
+        cli_module.main(
+            [
+                "diff",
+                str(baseline_path),
+                str(current_path),
+                "--output",
+                str(output_path),
+            ]
+        )
+        == 0
+    )
     report_mapping = json.loads(output_path.read_text(encoding="utf-8"))
     assert report_mapping["baseline"]["path"] == str(baseline_path)
     assert report_mapping["current"]["path"] == str(current_path)
-    assert report_mapping["baseline"]["sha256"] == hashlib.sha256(
-        serialize_snapshot(baseline)
-    ).hexdigest()
+    assert (
+        report_mapping["baseline"]["sha256"]
+        == hashlib.sha256(serialize_snapshot(baseline)).hexdigest()
+    )
     assert report_mapping["comparison"]["status"] == "complete"
     assert report_mapping["changes"] == []
     captured = capsys.readouterr()
-    assert captured.out.startswith("DriftApe 0.1.0\n\nBaseline integrity: VERIFIED\n")
+    assert captured.out.startswith(
+        "DriftApe 0.2.0.dev0\n\nBaseline integrity: VERIFIED\n"
+    )
     assert f"Output: {output_path}\n" in captured.out
     assert "{" not in captured.out
     assert captured.err == ""
@@ -448,9 +497,12 @@ def test_diff_partial_precedence_exit_2(tmp_path: Path, with_change: bool) -> No
     )
     _baseline_pair(baseline_path, baseline)
     _current_file(current_path, current)
-    assert cli_module.main(
-        ["diff", str(baseline_path), str(current_path), "--output", str(output)]
-    ) == 2
+    assert (
+        cli_module.main(
+            ["diff", str(baseline_path), str(current_path), "--output", str(output)]
+        )
+        == 2
+    )
     assert json.loads(output.read_text())["comparison"]["status"] == "partial"
 
 
@@ -458,12 +510,19 @@ def test_diff_composes_accepted_apis_and_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     baseline = _snapshot(SnapshotKind.BASELINE)
-    current = _snapshot(SnapshotKind.CURRENT, timestamp=datetime(2026, 8, 28, 11, 22, 33, tzinfo=timezone.utc))
+    current = _snapshot(
+        SnapshotKind.CURRENT, timestamp=datetime(2026, 8, 28, 11, 22, 33, tzinfo=UTC)
+    )
     diff_result = DiffResult(ComparisonStatus.COMPLETE, (), (), ())
     output = tmp_path / "out.json"
     seen: dict[str, Any] = {}
 
-    monkeypatch.setattr(cli_module, "load_baseline_path", lambda path: seen.setdefault("baseline_path", path) or baseline)
+    monkeypatch.setattr(
+        cli_module,
+        "load_baseline_path",
+        lambda path: seen.setdefault("baseline_path", path) or baseline,
+    )
+
     # setdefault above returns Path, so use explicit functions instead
     def load(path: Path) -> Snapshot:
         seen["baseline_path"] = path
@@ -490,7 +549,17 @@ def test_diff_composes_accepted_apis_and_context(
     monkeypatch.setattr(cli_module, "compare_snapshots", compare)
     monkeypatch.setattr(cli_module, "evaluate_changes", evaluate)
     monkeypatch.setattr(cli_module, "build_report", report_builder)
-    monkeypatch.setattr(cli_module, "_utc_timestamp", lambda value=None: "2026-08-28T12:34:56Z" if value is None else cli_module._utc_timestamp.__wrapped__(value) if hasattr(cli_module._utc_timestamp, "__wrapped__") else value.strftime("%Y-%m-%dT%H:%M:%SZ"))
+    monkeypatch.setattr(
+        cli_module,
+        "_utc_timestamp",
+        lambda value=None: (
+            "2026-08-28T12:34:56Z"
+            if value is None
+            else cli_module._utc_timestamp.__wrapped__(value)
+            if hasattr(cli_module._utc_timestamp, "__wrapped__")
+            else value.strftime("%Y-%m-%dT%H:%M:%SZ")
+        ),
+    )
 
     assert cli_module.main(["diff", "B-LABEL", "C-LABEL", "--output", str(output)]) == 0
     assert seen["baseline_path"] == Path("B-LABEL")
@@ -500,7 +569,10 @@ def test_diff_composes_accepted_apis_and_context(
     kwargs = seen["report"]
     assert kwargs["baseline_path"] == "B-LABEL"
     assert kwargs["current_path"] == "C-LABEL"
-    assert kwargs["baseline_sha256"] == hashlib.sha256(serialize_snapshot(baseline)).hexdigest()
+    assert (
+        kwargs["baseline_sha256"]
+        == hashlib.sha256(serialize_snapshot(baseline)).hexdigest()
+    )
     assert kwargs["generated_at_utc"] == "2026-08-28T12:34:56Z"
     assert kwargs["diff_result"] is diff_result
     assert kwargs["findings"] == ()
@@ -539,11 +611,24 @@ def test_diff_frozen_error_mapping_no_output_no_success_stdout(
             raise exc
         return value
 
-    monkeypatch.setattr(cli_module, "load_baseline_path", lambda _p: maybe_raise("baseline", baseline))
-    monkeypatch.setattr(cli_module, "_load_current_path", lambda _p: maybe_raise("current", current))
-    monkeypatch.setattr(cli_module, "compare_snapshots", lambda _b, _c: maybe_raise("compare", DiffResult(ComparisonStatus.COMPLETE, (), (), ())))
+    monkeypatch.setattr(
+        cli_module, "load_baseline_path", lambda _p: maybe_raise("baseline", baseline)
+    )
+    monkeypatch.setattr(
+        cli_module, "_load_current_path", lambda _p: maybe_raise("current", current)
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "compare_snapshots",
+        lambda _b, _c: maybe_raise(
+            "compare", DiffResult(ComparisonStatus.COMPLETE, (), (), ())
+        ),
+    )
 
-    assert cli_module.main(["diff", "base.json", "cur.json", "--output", str(output)]) == code
+    assert (
+        cli_module.main(["diff", "base.json", "cur.json", "--output", str(output)])
+        == code
+    )
     assert not output.exists()
     captured = capsys.readouterr()
     assert captured.out == ""
@@ -556,7 +641,9 @@ def test_diff_output_conflict_prevents_input_load_and_preserves_bytes(
 ) -> None:
     output = tmp_path / "changes.json"
     output.write_bytes(b"old")
-    monkeypatch.setattr(cli_module, "load_baseline_path", lambda _p: pytest.fail("loaded"))
+    monkeypatch.setattr(
+        cli_module, "load_baseline_path", lambda _p: pytest.fail("loaded")
+    )
     assert cli_module.main(["diff", "base", "current", "--output", str(output)]) == 3
     assert output.read_bytes() == b"old"
 
@@ -568,9 +655,19 @@ def test_diff_force_replaces_existing_output(tmp_path: Path) -> None:
     _baseline_pair(baseline_path)
     _current_file(current_path)
     output.write_bytes(b"old")
-    assert cli_module.main(
-        ["diff", str(baseline_path), str(current_path), "--output", str(output), "--force"]
-    ) == 0
+    assert (
+        cli_module.main(
+            [
+                "diff",
+                str(baseline_path),
+                str(current_path),
+                "--output",
+                str(output),
+                "--force",
+            ]
+        )
+        == 0
+    )
     assert output.read_bytes() != b"old"
     assert output.read_bytes().endswith(b"\n")
 

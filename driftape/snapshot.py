@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from driftape import platform_windows
 from driftape.collectors.defender import collect_defender
@@ -35,7 +35,7 @@ class SnapshotCollectionError(RuntimeError):
 
 def _utc_now() -> datetime:
     """Return the collection-start time as UTC with second precision."""
-    return datetime.now(timezone.utc).replace(microsecond=0)
+    return datetime.now(UTC).replace(microsecond=0)
 
 
 def _internal_error(scope: str, operation: str, domain: str) -> DriftApeError:

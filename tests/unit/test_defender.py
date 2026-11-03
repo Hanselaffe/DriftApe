@@ -70,9 +70,7 @@ def _document(
             _success(_preference_data()) if preference is None else preference
         ),
         "status": (
-            _success({"RealTimeProtectionEnabled": True})
-            if status is None
-            else status
+            _success({"RealTimeProtectionEnabled": True}) if status is None else status
         ),
     }
 
@@ -227,9 +225,11 @@ def test_t_wp7_014_path_process_case_preserved(
     pref = _success(
         _preference_data(paths=["C:/TeMp"], processes=["C:/Tools/Agent.EXE"])
     )
-    values = {item.kind: item.value for item in _collect(
-        monkeypatch, _document(preference=pref)
-    ).data.exclusions or ()}
+    values = {
+        item.kind: item.value
+        for item in _collect(monkeypatch, _document(preference=pref)).data.exclusions
+        or ()
+    }
     assert values[DefenderExclusionKind.PATH] == r"C:\TeMp"
     assert values[DefenderExclusionKind.PROCESS] == r"C:\Tools\Agent.EXE"
 
@@ -382,7 +382,9 @@ def test_t_wp7_029_extension_collision_invalidates_exclusions(
 def test_t_wp7_030_equivalent_ipv6_collision_invalidates_exclusions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pref = _success(_preference_data(ip_addresses=["2001:db8::1", "2001:0db8:0:0:0:0:0:1"]))
+    pref = _success(
+        _preference_data(ip_addresses=["2001:db8::1", "2001:0db8:0:0:0:0:0:1"])
+    )
     result = _collect(monkeypatch, _document(preference=pref))
     assert "exclusions" not in result.coverage
 
@@ -403,9 +405,10 @@ def test_t_wp7_032_source_order_does_not_change_exclusions(
 ) -> None:
     first = _success(_preference_data(paths=[r"Z:\x", r"A:\x"]))
     second = _success(_preference_data(paths=[r"A:\x", r"Z:\x"]))
-    assert _collect(monkeypatch, _document(preference=first)).data.exclusions == _collect(
-        monkeypatch, _document(preference=second)
-    ).data.exclusions
+    assert (
+        _collect(monkeypatch, _document(preference=first)).data.exclusions
+        == _collect(monkeypatch, _document(preference=second)).data.exclusions
+    )
 
 
 def test_t_wp7_033_order_across_kinds_is_by_id(
@@ -419,9 +422,11 @@ def test_t_wp7_033_order_across_kinds_is_by_id(
             ip_addresses=["192.0.2.5"],
         )
     )
-    ids = [item.id for item in _collect(
-        monkeypatch, _document(preference=pref)
-    ).data.exclusions or ()]
+    ids = [
+        item.id
+        for item in _collect(monkeypatch, _document(preference=pref)).data.exclusions
+        or ()
+    ]
     assert ids == [
         "extension:exe",
         "ip_address:192.0.2.5",
@@ -496,7 +501,9 @@ def test_t_wp7_040_preference_permission_denied_maps_access_denied(
 ) -> None:
     result = _collect(
         monkeypatch,
-        _document(preference=_failure(category="PermissionDenied", message="localized")),
+        _document(
+            preference=_failure(category="PermissionDenied", message="localized")
+        ),
     )
     assert result.errors[0].code is ErrorCode.ACCESS_DENIED
     assert result.errors[0].scope == "collector.defender.preference"
@@ -526,7 +533,9 @@ def test_t_wp7_042_runtime_permission_denied_maps_access_denied(
 def test_t_wp7_043_runtime_other_failure_maps_command_failed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    result = _collect(monkeypatch, _document(status=_failure(category="ObjectNotFound")))
+    result = _collect(
+        monkeypatch, _document(status=_failure(category="ObjectNotFound"))
+    )
     assert result.errors[0].code is ErrorCode.COMMAND_FAILED
 
 
@@ -583,7 +592,9 @@ def test_t_wp7_048_unsupported_platform_skips_powershell(
         called = True
         return _document()
 
-    monkeypatch.setattr(defender.platform_windows, "require_supported_platform", unsupported)
+    monkeypatch.setattr(
+        defender.platform_windows, "require_supported_platform", unsupported
+    )
     monkeypatch.setattr(defender.powershell, "run_powershell_json", forbidden)
     result = defender.collect_defender()
     assert called is False

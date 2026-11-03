@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from copy import deepcopy
-from datetime import timezone
-from typing import Any, Callable
+from datetime import UTC
+from typing import Any
 
 import pytest
 
@@ -157,7 +158,7 @@ def test_complete_valid_baseline_snapshot_validates() -> None:
     assert isinstance(result, Snapshot)
     assert result.snapshot_kind is SnapshotKind.BASELINE
     assert result.collection.complete is True
-    assert result.collected_at_utc.tzinfo is timezone.utc
+    assert result.collected_at_utc.tzinfo is UTC
     assert isinstance(result.collectors.services.data.services, tuple)
     assert isinstance(result.collectors.users.coverage, frozenset)
 
@@ -225,9 +226,7 @@ def test_empty_successfully_collected_resource_lists_validate() -> None:
     [
         (lambda raw: raw.pop("schema_version"), "schema_version"),
         (
-            lambda raw: raw.__setitem__(
-                "schema_version", "driftape.snapshot.v2"
-            ),
+            lambda raw: raw.__setitem__("schema_version", "driftape.snapshot.v2"),
             "schema_version",
         ),
         (lambda raw: raw.__setitem__("schema_version", 1), "schema_version"),

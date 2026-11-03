@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import is_dataclass, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 
 import pytest
@@ -77,9 +77,7 @@ def _admin(
     object_class: str = "User",
     principal_source: PrincipalSource = PrincipalSource.LOCAL,
 ) -> AdministratorMember:
-    return AdministratorMember(
-        resource_id, name, object_class, principal_source
-    )
+    return AdministratorMember(resource_id, name, object_class, principal_source)
 
 
 def _service(
@@ -174,7 +172,7 @@ def _snapshot(
     runtime: DefenderRuntime | None = None,
 ) -> Snapshot:
     if timestamp is None:
-        timestamp = datetime(2026, 8, 26, 12, 0, tzinfo=timezone.utc)
+        timestamp = datetime(2026, 8, 26, 12, 0, tzinfo=UTC)
     if configuration is None and "configuration" in defender_coverage:
         configuration = DefenderConfiguration("microsoft_defender", False)
     if runtime is None and "runtime" in defender_coverage:
@@ -754,11 +752,11 @@ def test_t_wp10_047_timestamps_do_not_affect_change_id() -> None:
     current_a = _snapshot(
         SnapshotKind.CURRENT,
         local_users=(_user(enabled=False),),
-        timestamp=datetime(2026, 8, 26, 13, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 8, 26, 13, 0, tzinfo=UTC),
     )
     current_b = replace(
         current_a,
-        collected_at_utc=datetime(2030, 1, 1, tzinfo=timezone.utc),
+        collected_at_utc=datetime(2030, 1, 1, tzinfo=UTC),
     )
     assert compare_snapshots(baseline, current_a).changes[0].change_id == (
         compare_snapshots(baseline, current_b).changes[0].change_id
@@ -861,9 +859,10 @@ def test_t_wp10_052_resource_tuple_order_does_not_affect_change_order() -> None:
             ),
         ),
     )
-    assert compare_snapshots(baseline, current_a).changes == compare_snapshots(
-        baseline, current_b
-    ).changes
+    assert (
+        compare_snapshots(baseline, current_a).changes
+        == compare_snapshots(baseline, current_b).changes
+    )
 
 
 def test_t_wp10_053_modified_properties_are_ordered_by_property() -> None:

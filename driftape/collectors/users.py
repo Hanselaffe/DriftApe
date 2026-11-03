@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Protocol, TypeVar
+from typing import Protocol
 
 from driftape import platform_windows
 from driftape.acquisition import powershell
@@ -119,10 +119,8 @@ catch {
 
 
 class _Identified(Protocol):
-    id: str
-
-
-_T = TypeVar("_T", bound=_Identified)
+    @property
+    def id(self) -> str: ...
 
 
 class _SectionOutputError(ValueError):
@@ -233,11 +231,11 @@ def _normalize_administrator(value: object) -> AdministratorMember:
     )
 
 
-def _normalize_items(
+def _normalize_items[T: _Identified](
     section: object,
     *,
-    item_normalizer: Callable[[object], _T],
-) -> tuple[_T, ...]:
+    item_normalizer: Callable[[object], T],
+) -> tuple[T, ...]:
     if not isinstance(section, dict):
         raise _SectionOutputError("Collector subsection must be an object.")
 
@@ -313,14 +311,14 @@ def _subsection_error(
     )
 
 
-def _process_section(
+def _process_section[T: _Identified](
     root: dict[str, object],
     *,
     key: str,
     scope: str,
     operation: str,
-    item_normalizer: Callable[[object], _T],
-) -> tuple[tuple[_T, ...] | None, DriftApeError | None]:
+    item_normalizer: Callable[[object], T],
+) -> tuple[tuple[T, ...] | None, DriftApeError | None]:
     if key not in root:
         return None, _error(
             code=ErrorCode.UNEXPECTED_OUTPUT,
@@ -448,9 +446,7 @@ def collect_users() -> UsersCollectorResult:
         status = CollectorStatus.FAILED
 
     errors = tuple(
-        error
-        for error in (local_error, administrators_error)
-        if error is not None
+        error for error in (local_error, administrators_error) if error is not None
     )
 
     return UsersCollectorResult(

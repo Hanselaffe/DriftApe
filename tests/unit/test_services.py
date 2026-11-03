@@ -58,9 +58,7 @@ def _failed_section(
 
 
 def _document(section: object | None = None) -> dict[str, object]:
-    return {
-        "services": _success_section([_service()]) if section is None else section
-    }
+    return {"services": _success_section([_service()]) if section is None else section}
 
 
 @pytest.fixture(autouse=True)
@@ -359,9 +357,7 @@ def test_t_wp5_030_sorting_uses_canonical_id(
     result = _collect(
         monkeypatch,
         _document(
-            _success_section(
-                [_service(name="zService"), _service(name="AService")]
-            )
+            _success_section([_service(name="zService"), _service(name="AService")])
         ),
     )
     assert [item.id for item in result.data.services or ()] == [
@@ -541,9 +537,7 @@ def test_t_wp5_051_script_uses_win32_service_cim_class() -> None:
 
 def test_t_wp5_052_script_projects_only_authorized_service_properties() -> None:
     script = services._SERVICES_POWERSHELL_SCRIPT
-    property_argument = (
-        "-Property Name,DisplayName,StartMode,PathName,StartName"
-    )
+    property_argument = "-Property Name,DisplayName,StartMode,PathName,StartName"
     assert property_argument in script
     for forbidden in (
         "ProcessId",

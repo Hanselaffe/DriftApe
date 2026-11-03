@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from copy import deepcopy
 from dataclasses import replace
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from enum import Enum
 from typing import Any
 
@@ -246,13 +246,11 @@ def test_timestamp_exact_z_format() -> None:
         (2026, "2026-01-02T03:04:05Z"),
     ],
 )
-def test_timestamp_year_uses_exact_four_digit_width(
-    year: int, expected: str
-) -> None:
+def test_timestamp_year_uses_exact_four_digit_width(year: int, expected: str) -> None:
     """WP2 R2: public mapping path emits an exact four-digit year."""
     snapshot = replace(
         _snapshot(),
-        collected_at_utc=datetime(year, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+        collected_at_utc=datetime(year, 1, 2, 3, 4, 5, tzinfo=UTC),
     )
     assert snapshot_to_mapping(snapshot)["collected_at_utc"] == expected
 
@@ -385,9 +383,7 @@ def test_unavailable_defender_sections_remain_null() -> None:
         "data": {"exclusions": None, "configuration": None, "runtime": None},
         "errors": [],
     }
-    data = snapshot_to_mapping(validate_snapshot(raw))["collectors"]["defender"][
-        "data"
-    ]
+    data = snapshot_to_mapping(validate_snapshot(raw))["collectors"]["defender"]["data"]
     assert data == {"exclusions": None, "configuration": None, "runtime": None}
 
 
@@ -407,9 +403,9 @@ def test_task_principals_serialize_exactly() -> None:
 
 def test_task_actions_serialize_exactly() -> None:
     """T-WP2-019: task actions use exact type/xml_c14n members."""
-    action = snapshot_to_mapping(_snapshot())["collectors"]["tasks"]["data"][
-        "tasks"
-    ][0]["actions"][0]
+    action = snapshot_to_mapping(_snapshot())["collectors"]["tasks"]["data"]["tasks"][
+        0
+    ]["actions"][0]
     assert action == {
         "type": "Exec",
         "xml_c14n": "<Exec><Command>backup.exe</Command></Exec>",
@@ -418,9 +414,9 @@ def test_task_actions_serialize_exactly() -> None:
 
 def test_task_triggers_serialize_exactly() -> None:
     """T-WP2-020: task triggers use exact type/xml_c14n members."""
-    trigger = snapshot_to_mapping(_snapshot())["collectors"]["tasks"]["data"][
-        "tasks"
-    ][0]["triggers"][0]
+    trigger = snapshot_to_mapping(_snapshot())["collectors"]["tasks"]["data"]["tasks"][
+        0
+    ]["triggers"][0]
     assert trigger == {"type": "CalendarTrigger", "xml_c14n": "<CalendarTrigger />"}
 
 
@@ -439,9 +435,9 @@ def test_task_nested_tuple_orders_are_preserved() -> None:
     )
     task["actions"].append({"type": "ComHandler", "xml_c14n": "<ComHandler />"})
     task["triggers"].append({"type": "BootTrigger", "xml_c14n": "<BootTrigger />"})
-    mapped = snapshot_to_mapping(validate_snapshot(raw))["collectors"]["tasks"][
-        "data"
-    ]["tasks"][0]
+    mapped = snapshot_to_mapping(validate_snapshot(raw))["collectors"]["tasks"]["data"][
+        "tasks"
+    ][0]
     assert [item["id"] for item in mapped["principals"]] == [
         "principal-1",
         "principal-2",
@@ -482,12 +478,8 @@ def test_coverage_sorting_is_active_and_deterministic() -> None:
     """T-WP2-024: equivalent unordered coverage sources produce same bytes."""
     raw_a = complete_mapping()
     raw_b = deepcopy(raw_a)
-    raw_a["collectors"]["users"]["coverage"] = list(
-        {"local_users", "administrators"}
-    )
-    raw_b["collectors"]["users"]["coverage"] = list(
-        {"administrators", "local_users"}
-    )
+    raw_a["collectors"]["users"]["coverage"] = list({"local_users", "administrators"})
+    raw_b["collectors"]["users"]["coverage"] = list({"administrators", "local_users"})
     snapshot_a = validate_snapshot(raw_a)
     snapshot_b = validate_snapshot(raw_b)
     assert snapshot_a == snapshot_b
@@ -554,7 +546,7 @@ def test_datetime_with_microseconds_is_rejected() -> None:
     """T-WP2-028: non-zero microseconds are never silently truncated."""
     snapshot = replace(
         _snapshot(),
-        collected_at_utc=datetime(2026, 8, 25, 10, 15, 30, 1, tzinfo=timezone.utc),
+        collected_at_utc=datetime(2026, 8, 25, 10, 15, 30, 1, tzinfo=UTC),
     )
     with pytest.raises(SnapshotSerializationError, match="fractional seconds"):
         serialize_snapshot(snapshot)

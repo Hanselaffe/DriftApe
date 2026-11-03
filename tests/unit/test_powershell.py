@@ -85,7 +85,7 @@ def test_invocation_contract(
         (b'{"key":"value"}', {"key": "value"}),
         (b"[1,2,3]", [1, 2, 3]),
         ('{"name":"Überwachungsdienst"}'.encode(), {"name": "Überwachungsdienst"}),
-        (b"  \r\n {\"ok\": true} \t ", {"ok": True}),
+        (b'  \r\n {"ok": true} \t ', {"ok": True}),
     ],
 )
 def test_valid_json_forms(
@@ -134,6 +134,7 @@ def test_timeout_is_distinct(
     monkeypatch: pytest.MonkeyPatch, resolved_executable: str
 ) -> None:
     """T-WP3-PS-020: subprocess timeout becomes dedicated timeout exception."""
+
     def timeout(*_args: object, **_kwargs: object) -> object:
         raise subprocess.TimeoutExpired(cmd="powershell", timeout=2.5)
 

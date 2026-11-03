@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Protocol, TypeVar, cast
+from typing import Protocol, cast
 
 from driftape.constants import SNAPSHOT_SCHEMA_VERSION
 from driftape.models import (
@@ -50,11 +50,10 @@ _SERVICES_COVERAGE = frozenset({"services"})
 _TASKS_COVERAGE = frozenset({"tasks"})
 _DEFENDER_COVERAGE = frozenset({"exclusions", "configuration", "runtime"})
 
-_EnumT = TypeVar("_EnumT", bound=StrEnum)
-
 
 class _HasId(Protocol):
-    id: str
+    @property
+    def id(self) -> str: ...
 
 
 class SnapshotValidationError(ValueError):
@@ -129,10 +128,10 @@ def _nullable_string(value: object, path: str) -> str | None:
 def _boolean(value: object, path: str) -> bool:
     if type(value) is not bool:
         raise SnapshotValidationError(path, "expected boolean")
-    return cast(bool, value)
+    return value
 
 
-def _enum(value: object, path: str, enum_type: type[_EnumT]) -> _EnumT:
+def _enum[EnumT: StrEnum](value: object, path: str, enum_type: type[EnumT]) -> EnumT:
     raw = _string(value, path)
     try:
         return enum_type(raw)
@@ -142,15 +141,14 @@ def _enum(value: object, path: str, enum_type: type[_EnumT]) -> _EnumT:
 
 def _native_code(value: object, path: str) -> str | int | None:
     if value is None or isinstance(value, str) or type(value) is int:
-        return cast(str | int | None, value)
+        return value
     raise SnapshotValidationError(path, "expected string, integer, or null")
 
 
 def _errors(value: object, path: str) -> tuple[DriftApeError, ...]:
     items = _array(value, path)
     return tuple(
-        validate_error(item, f"{path}[{index}]")
-        for index, item in enumerate(items)
+        validate_error(item, f"{path}[{index}]") for index, item in enumerate(items)
     )
 
 
@@ -242,7 +240,7 @@ def _validate_host(raw: object, path: str) -> HostInfo:
             )
     return HostInfo(
         hostname=_non_empty_no_edge_whitespace(value["hostname"], f"{path}.hostname"),
-        machine_id_sha256=cast(str | None, machine_id),
+        machine_id_sha256=machine_id,
         os_name=_string(value["os_name"], f"{path}.os_name", non_empty=True),
         os_version=_string(value["os_version"], f"{path}.os_version", non_empty=True),
         os_build=_string(value["os_build"], f"{path}.os_build", non_empty=True),
@@ -644,7 +642,7 @@ def _timestamp(value: object, path: str) -> datetime:
         parsed = datetime.strptime(raw, "%Y-%m-%dT%H:%M:%SZ")
     except ValueError as exc:
         raise SnapshotValidationError(path, "invalid calendar timestamp") from exc
-    return parsed.replace(tzinfo=timezone.utc)
+    return parsed.replace(tzinfo=UTC)
 
 
 def validate_snapshot(raw: Mapping[str, object]) -> Snapshot:

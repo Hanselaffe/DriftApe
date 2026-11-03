@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from dataclasses import FrozenInstanceError, fields, is_dataclass, replace
 from pathlib import Path
-from typing import Any, get_type_hints
+from typing import get_type_hints
 
 import pytest
 
@@ -20,7 +20,6 @@ from driftape.reporting import (
     serialize_report,
 )
 from driftape.rules import Finding, FindingSeverity
-
 
 SHA = "a" * 64
 
@@ -139,7 +138,7 @@ def test_canonical_root_and_nested_keys_are_exact() -> None:
         "summary",
     }
     assert mapping["schema_version"] == CHANGE_SCHEMA_VERSION == "driftape.changes.v1"
-    assert mapping["tool_version"] == TOOL_VERSION == "0.1.0"
+    assert mapping["tool_version"] == TOOL_VERSION == "0.2.0.dev0"
     assert set(mapping["baseline"]) == {"path", "sha256", "collected_at_utc"}  # type: ignore[arg-type]
     assert set(mapping["current"]) == {"path", "collected_at_utc"}  # type: ignore[arg-type]
     assert set(mapping["comparison"]) == {  # type: ignore[arg-type]
@@ -180,7 +179,9 @@ def test_malformed_timestamps_rejected(timestamp: str) -> None:
         _report(generated_at_utc=timestamp)
 
 
-@pytest.mark.parametrize("field", ("baseline_collected_at_utc", "current_collected_at_utc"))
+@pytest.mark.parametrize(
+    "field", ("baseline_collected_at_utc", "current_collected_at_utc")
+)
 def test_all_context_timestamps_are_validated(field: str) -> None:
     kwargs = {field: "2026-08-27T09:30:00+00:00"}
     with pytest.raises(InvalidReportInputError):
@@ -204,7 +205,9 @@ def test_empty_paths_rejected(field: str) -> None:
 
 
 def test_paths_are_preserved_as_supplied_labels() -> None:
-    report = _report(baseline_path="../RAW/../baseline.json", current_path="C:\\x\\current.json")
+    report = _report(
+        baseline_path="../RAW/../baseline.json", current_path="C:\\x\\current.json"
+    )
     assert report.baseline_path == "../RAW/../baseline.json"
     assert report.current_path == "C:\\x\\current.json"
 
@@ -374,7 +377,9 @@ def test_summary_mixed_severity_counts_are_exact_and_independent_of_changes() ->
     }
 
 
-def test_all_four_zero_severity_keys_remain_present_when_unmatched_changes_exist() -> None:
+def test_all_four_zero_severity_keys_remain_present_when_unmatched_changes_exist() -> (
+    None
+):
     summary = report_to_mapping(_report(findings=()))["summary"]
     assert summary["changes"] == 1  # type: ignore[index]
     assert summary["findings"] == 0  # type: ignore[index]
@@ -383,13 +388,32 @@ def test_all_four_zero_severity_keys_remain_present_when_unmatched_changes_exist
 
 def test_exact_representative_canonical_json_bytes() -> None:
     expected = (
-        b'{"baseline":{"collected_at_utc":"2026-08-27T09:00:00Z","path":"baseline.json","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},'
-        b'"changes":[{"change_id":"c1","change_type":"ADDED","domain":"users.local_users","new_value":{"enabled":true,"name":"Alice"},"object_id":"S-1","object_name":"Alice","object_type":"local_user","old_value":null,"property":null}],'
-        b'"comparison":{"compared_domains":["users.local_users"],"errors":[],"skipped_domains":[],"status":"complete"},'
+        b'{"baseline":{"collected_at_utc":"2026-08'
+        b'-27T09:00:00Z","path":"baseline.json","s'
+        b'ha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+        b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},'
+        b'"changes":[{"change_id":"c1","change_typ'
+        b'e":"ADDED","domain":"users.local_users",'
+        b'"new_value":{"enabled":true,"name":"Alic'
+        b'e"},"object_id":"S-1","object_name":"Ali'
+        b'ce","object_type":"local_user","old_valu'
+        b'e":null,"property":null}],'
+        b'"comparison":{"compared_domains":["users'
+        b'.local_users"],"errors":[],"skipped_doma'
+        b'ins":[],"status":"complete"},'
         b'"current":{"collected_at_utc":"2026-08-27T09:30:00Z","path":"current.json"},'
-        b'"findings":[{"change_ids":["c1"],"domain":"users.local_users","finding_id":"f1","message":"A local user account was added and should be reviewed.","rule_id":"DA-USR-001","severity":"MEDIUM","title":"Local user added"}],'
-        b'"generated_at_utc":"2026-08-27T10:00:00Z","schema_version":"driftape.changes.v1",'
-        b'"summary":{"changes":1,"findings":1,"severity":{"HIGH":0,"INFO":0,"LOW":0,"MEDIUM":1}},"tool_version":"0.1.0"}\n'
+        b'"findings":[{"change_ids":["c1"],"domain'
+        b'":"users.local_users","finding_id":"f1",'
+        b'"message":"A local user account was adde'
+        b'd and should be reviewed.","rule_id":"DA'
+        b'-USR-001","severity":"MEDIUM","title":"L'
+        b'ocal user added"}],'
+        b'"generated_at_utc":"2026-08-27T10:00:00Z'
+        b'","schema_version":"driftape.changes.v1"'
+        b","
+        b'"summary":{"changes":1,"findings":1,"sev'
+        b'erity":{"HIGH":0,"INFO":0,"LOW":0,"MEDIU'
+        b'M":1}},"tool_version":"0.2.0.dev0"}\n'
     )
     assert serialize_report(_report()) == expected
 
@@ -453,7 +477,7 @@ def test_complete_terminal_summary_exact_golden_text() -> None:
         findings=findings,
     )
     expected = (
-        "DriftApe 0.1.0\n"
+        "DriftApe 0.2.0.dev0\n"
         "\n"
         "Baseline integrity: VERIFIED\n"
         "Comparison: COMPLETE\n"
@@ -488,7 +512,7 @@ def test_partial_terminal_summary_zero_findings_and_nondefault_output_path() -> 
     assert "HIGH    0\nMEDIUM  0\nLOW     0\nINFO    0\n" in text
     assert text.endswith("Output: reports/changes-01.json\n")
     assert not text.endswith("\n\n")
-    assert "{\"" not in text
+    assert '{"' not in text
 
 
 def test_terminal_output_path_must_be_nonempty_string() -> None:

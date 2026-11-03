@@ -71,7 +71,9 @@ _RULE_TEXT = {
     "DA-ADM-001": _RuleText(
         FindingSeverity.HIGH,
         "Local administrator added",
-        "Principal added to the local Administrators group; this increases local administrative access and requires review.",
+        "Principal added to the local Administrators group; "
+        "this increases local administrative access and "
+        "requires review.",
     ),
     "DA-ADM-002": _RuleText(
         FindingSeverity.INFO,
@@ -91,7 +93,8 @@ _RULE_TEXT = {
     "DA-SVC-003": _RuleText(
         FindingSeverity.HIGH,
         "Service path changed",
-        "The configured service executable or command path changed and requires review.",
+        "The configured service executable or command path "
+        "changed and requires review.",
     ),
     "DA-SVC-004": _RuleText(
         FindingSeverity.HIGH,
@@ -131,7 +134,8 @@ _RULE_TEXT = {
     "DA-TASK-004": _RuleText(
         FindingSeverity.HIGH,
         "Scheduled task principals changed",
-        "The configured execution principals of a scheduled task changed and require review.",
+        "The configured execution principals of a scheduled "
+        "task changed and require review.",
     ),
     "DA-TASK-005": _RuleText(
         FindingSeverity.MEDIUM,
@@ -151,27 +155,34 @@ _RULE_TEXT = {
     "DA-DEF-003": _RuleText(
         FindingSeverity.HIGH,
         "Defender real-time monitoring disabled",
-        "Microsoft Defender real-time monitoring configuration changed from enabled to disabled.",
+        "Microsoft Defender real-time monitoring "
+        "configuration changed from enabled to disabled.",
     ),
     "DA-DEF-004": _RuleText(
         FindingSeverity.INFO,
         "Defender real-time monitoring enabled",
-        "Microsoft Defender real-time monitoring configuration changed from disabled to enabled.",
+        "Microsoft Defender real-time monitoring "
+        "configuration changed from disabled to enabled.",
     ),
     "DA-DEF-005": _RuleText(
         FindingSeverity.HIGH,
         "Defender real-time protection degraded",
-        "Microsoft Defender real-time protection state changed from enabled to disabled and requires review.",
+        "Microsoft Defender real-time protection state "
+        "changed from enabled to disabled and requires "
+        "review.",
     ),
     "DA-DEF-006": _RuleText(
         FindingSeverity.INFO,
         "Defender real-time protection restored",
-        "Microsoft Defender real-time protection state changed from disabled to enabled.",
+        "Microsoft Defender real-time protection state "
+        "changed from disabled to enabled.",
     ),
 }
 
 
-def _is_exact_bool_transition(old_value: object, new_value: object, old: bool, new: bool) -> bool:
+def _is_exact_bool_transition(
+    old_value: object, new_value: object, old: bool, new: bool
+) -> bool:
     return (
         type(old_value) is bool
         and type(new_value) is bool
@@ -188,9 +199,13 @@ def _match_rule(change: Change) -> str | None:
             return "DA-USR-002"
         if change.change_type is ChangeType.MODIFIED:
             if change.property == "enabled":
-                if _is_exact_bool_transition(change.old_value, change.new_value, False, True):
+                if _is_exact_bool_transition(
+                    change.old_value, change.new_value, False, True
+                ):
                     return "DA-USR-003"
-                if _is_exact_bool_transition(change.old_value, change.new_value, True, False):
+                if _is_exact_bool_transition(
+                    change.old_value, change.new_value, True, False
+                ):
                     return "DA-USR-004"
             if change.property == "name":
                 return "DA-USR-005"
@@ -245,18 +260,32 @@ def _match_rule(change: Change) -> str | None:
         return None
 
     if change.domain == "defender.configuration":
-        if change.change_type is ChangeType.MODIFIED and change.property == "disable_realtime_monitoring":
-            if _is_exact_bool_transition(change.old_value, change.new_value, False, True):
+        if (
+            change.change_type is ChangeType.MODIFIED
+            and change.property == "disable_realtime_monitoring"
+        ):
+            if _is_exact_bool_transition(
+                change.old_value, change.new_value, False, True
+            ):
                 return "DA-DEF-003"
-            if _is_exact_bool_transition(change.old_value, change.new_value, True, False):
+            if _is_exact_bool_transition(
+                change.old_value, change.new_value, True, False
+            ):
                 return "DA-DEF-004"
         return None
 
     if change.domain == "defender.runtime":
-        if change.change_type is ChangeType.MODIFIED and change.property == "real_time_protection_enabled":
-            if _is_exact_bool_transition(change.old_value, change.new_value, True, False):
+        if (
+            change.change_type is ChangeType.MODIFIED
+            and change.property == "real_time_protection_enabled"
+        ):
+            if _is_exact_bool_transition(
+                change.old_value, change.new_value, True, False
+            ):
                 return "DA-DEF-005"
-            if _is_exact_bool_transition(change.old_value, change.new_value, False, True):
+            if _is_exact_bool_transition(
+                change.old_value, change.new_value, False, True
+            ):
                 return "DA-DEF-006"
         return None
 
@@ -272,7 +301,7 @@ def _finding_id(rule_id: str, change_id: str) -> str:
         separators=(",", ":"),
         allow_nan=False,
     )
-    return hashlib.sha256(f"{canonical}\n".encode("utf-8")).hexdigest()
+    return hashlib.sha256(f"{canonical}\n".encode()).hexdigest()
 
 
 def evaluate_changes(changes: tuple[Change, ...]) -> tuple[Finding, ...]:

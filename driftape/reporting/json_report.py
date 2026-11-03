@@ -42,7 +42,9 @@ _SHA256_RE = re.compile(r"[0-9a-f]{64}")
 
 def _validate_timestamp(value: object, *, field_name: str) -> str:
     if not isinstance(value, str):
-        raise InvalidReportInputError(f"{field_name} must be a canonical UTC timestamp string")
+        raise InvalidReportInputError(
+            f"{field_name} must be a canonical UTC timestamp string"
+        )
     match = _TIMESTAMP_RE.fullmatch(value)
     if match is None:
         raise InvalidReportInputError(
@@ -58,7 +60,9 @@ def _validate_timestamp(value: object, *, field_name: str) -> str:
             int(match.group("second")),
         )
     except ValueError as exc:
-        raise InvalidReportInputError(f"{field_name} is not a valid UTC timestamp") from exc
+        raise InvalidReportInputError(
+            f"{field_name} is not a valid UTC timestamp"
+        ) from exc
     return value
 
 
@@ -92,13 +96,17 @@ def _validate_changes(changes: object) -> tuple[Change, ...]:
     previous_key: tuple[str, str, str, str] | None = None
     for change in changes:
         if not isinstance(change, Change):
-            raise InvalidReportInputError("diff_result.changes contains a non-Change member")
+            raise InvalidReportInputError(
+                "diff_result.changes contains a non-Change member"
+            )
         if change.change_id in seen_change_ids:
             raise InvalidReportInputError(f"duplicate change_id: {change.change_id}")
         seen_change_ids.add(change.change_id)
         current_key = _change_sort_key(change)
         if previous_key is not None and current_key < previous_key:
-            raise InvalidReportInputError("changes are not in accepted WP10 canonical order")
+            raise InvalidReportInputError(
+                "changes are not in accepted WP10 canonical order"
+            )
         previous_key = current_key
     return changes
 
@@ -128,7 +136,9 @@ def _validate_findings(
             )
         current_key = (finding.rule_id, finding.change_ids[0])
         if previous_key is not None and current_key < previous_key:
-            raise InvalidReportInputError("findings are not in accepted WP11 canonical order")
+            raise InvalidReportInputError(
+                "findings are not in accepted WP11 canonical order"
+            )
         previous_key = current_key
     return findings
 

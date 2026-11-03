@@ -7,7 +7,7 @@ import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Protocol, TypeVar
+from typing import Protocol
 
 from driftape.constants import SNAPSHOT_SCHEMA_VERSION
 from driftape.models import (
@@ -103,10 +103,8 @@ _DOMAINS = (
 
 
 class _HasId(Protocol):
-    id: str
-
-
-_ResourceT = TypeVar("_ResourceT", bound=_HasId)
+    @property
+    def id(self) -> str: ...
 
 
 def _local_user_to_mapping(resource: LocalUser) -> dict[str, object]:
@@ -249,14 +247,14 @@ def _make_change(
     )
 
 
-def _index_resources(
-    resources: tuple[_ResourceT, ...] | None,
+def _index_resources[ResourceT: _HasId](
+    resources: tuple[ResourceT, ...] | None,
     *,
     domain: str,
-) -> dict[str, _ResourceT]:
+) -> dict[str, ResourceT]:
     if resources is None:
         raise InvalidDiffInputError(f"covered domain {domain!r} has null data")
-    indexed: dict[str, _ResourceT] = {}
+    indexed: dict[str, ResourceT] = {}
     for resource in resources:
         if resource.id in indexed:
             raise InvalidDiffInputError(
@@ -266,15 +264,15 @@ def _index_resources(
     return indexed
 
 
-def _compare_sequence(
+def _compare_sequence[ResourceT: _HasId](
     *,
     domain: str,
     object_type: str,
-    baseline_resources: tuple[_ResourceT, ...] | None,
-    current_resources: tuple[_ResourceT, ...] | None,
+    baseline_resources: tuple[ResourceT, ...] | None,
+    current_resources: tuple[ResourceT, ...] | None,
     properties: tuple[str, ...],
-    to_mapping: Callable[[_ResourceT], dict[str, object]],
-    object_name: Callable[[_ResourceT], str],
+    to_mapping: Callable[[ResourceT], dict[str, object]],
+    object_name: Callable[[ResourceT], str],
 ) -> list[Change]:
     baseline_by_id = _index_resources(baseline_resources, domain=domain)
     current_by_id = _index_resources(current_resources, domain=domain)
@@ -334,11 +332,11 @@ def _compare_sequence(
     return changes
 
 
-def _singleton_tuple(
-    resource: _ResourceT | None,
+def _singleton_tuple[ResourceT](
+    resource: ResourceT | None,
     *,
     domain: str,
-) -> tuple[_ResourceT, ...]:
+) -> tuple[ResourceT, ...]:
     if resource is None:
         raise InvalidDiffInputError(f"covered domain {domain!r} has null data")
     return (resource,)
@@ -577,9 +575,7 @@ def compare_snapshots(baseline: Snapshot, current: Snapshot) -> DiffResult:
         skipped.append(domain)
 
     ordered_changes = tuple(sorted(changes, key=_change_sort_key))
-    status = (
-        ComparisonStatus.COMPLETE if not skipped else ComparisonStatus.PARTIAL
-    )
+    status = ComparisonStatus.COMPLETE if not skipped else ComparisonStatus.PARTIAL
     return DiffResult(
         status=status,
         compared_domains=tuple(compared),

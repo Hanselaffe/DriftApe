@@ -8,7 +8,7 @@ import json
 import os
 import tempfile
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -21,8 +21,8 @@ from driftape.constants import (
     TOOL_VERSION,
 )
 from driftape.integrity import (
-    BaselineIOError,
     BaselineIntegrityError,
+    BaselineIOError,
     BaselineManifest,
     BaselineSchemaMismatchError,
     InvalidBaselineSnapshotError,
@@ -111,7 +111,7 @@ def _snapshot(
         schema_version=SNAPSHOT_SCHEMA_VERSION,
         tool_version=tool_version,
         snapshot_kind=kind,
-        collected_at_utc=datetime(2026, 8, 25, 15, 30, 45, tzinfo=timezone.utc),
+        collected_at_utc=datetime(2026, 8, 25, 15, 30, 45, tzinfo=UTC),
         host=HostInfo(
             hostname="HOST01",
             machine_id_sha256="a" * 64,
@@ -180,9 +180,10 @@ def test_t_wp9_001_build_manifest_exact_fields() -> None:
 def test_t_wp9_002_digest_is_exact_baseline_sha256() -> None:
     snapshot = _snapshot()
     data = serialize_snapshot(snapshot)
-    assert build_baseline_manifest(snapshot, data).baseline_sha256 == hashlib.sha256(
-        data
-    ).hexdigest()
+    assert (
+        build_baseline_manifest(snapshot, data).baseline_sha256
+        == hashlib.sha256(data).hexdigest()
+    )
 
 
 def test_t_wp9_003_manifest_tool_version_from_snapshot() -> None:
@@ -842,9 +843,10 @@ def test_path_rework_write_custom_json_pair(tmp_path: Path) -> None:
     manifest_mapping = json.loads(manifest_bytes)
     assert baseline_bytes == serialize_snapshot(snapshot)
     assert manifest_mapping["baseline_file"] == "gold.json"
-    assert manifest_mapping["baseline_sha256"] == hashlib.sha256(
-        baseline_bytes
-    ).hexdigest()
+    assert (
+        manifest_mapping["baseline_sha256"]
+        == hashlib.sha256(baseline_bytes).hexdigest()
+    )
     manifest = integrity_module._parse_manifest_bytes(manifest_bytes, "gold.json")
     assert serialize_baseline_manifest(manifest) == manifest_bytes
 
@@ -1075,7 +1077,8 @@ def test_path_rework_old_api_remains_fixed_name_only(tmp_path: Path) -> None:
 def test_path_rework_new_public_apis_require_path(tmp_path: Path) -> None:
     with pytest.raises(TypeError):
         write_baseline_path(
-            _snapshot(), str(tmp_path / "gold.json")  # type: ignore[arg-type]
+            _snapshot(),
+            str(tmp_path / "gold.json"),  # type: ignore[arg-type]
         )
     with pytest.raises(TypeError):
         load_baseline_path(str(tmp_path / "gold.json"))  # type: ignore[arg-type]

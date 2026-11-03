@@ -1,0 +1,36 @@
+# Proposed for a separately approved WP5 B3 R2; NOT part of B2 R2 candidate.
+# Make recognized text files independent of core.autocrlf on Windows/Linux.
+* text=auto
+
+# Cross-platform source and configuration; preserve canonical LF on checkout.
+*.py         text eol=lf
+*.json       text eol=lf
+*.html       text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
+*.toml       text eol=lf
+*.md         text eol=lf
+*.ps1        text eol=lf
+*.sh         text eol=lf
+.gitattributes text eol=lf
+.gitignore  text eol=lf
+LICENSE     text eol=lf
+
+# Explicitly non-text artifacts, never normalize arbitrary binary bytes.
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+*.gif        binary
+*.ico        binary
+*.pdf        binary
+*.zip        binary
+*.7z         binary
+*.gz         binary
+*.exe        binary
+*.dll        binary
+*.pyc        binary
+*.pfx        binary
+*.p12        binary
+
+# JSON and HTML golden fixtures are covered by *.json / *.html above.
+# Do not use working-tree encoding conversions or change fixture content.

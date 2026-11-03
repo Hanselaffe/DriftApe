@@ -299,4 +299,4 @@ def serialize_snapshot(snapshot: Snapshot) -> bytes:
         sort_keys=True,
         separators=(",", ":"),
     )
-    return f"{text}\n".encode("utf-8")
+    return f"{text}\n".encode()

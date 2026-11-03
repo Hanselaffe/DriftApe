@@ -8,7 +8,6 @@ import platform
 import socket
 import struct
 import sys
-from typing import cast
 
 from driftape.models import HostInfo
 
@@ -54,7 +53,7 @@ def is_elevated() -> bool:
     """Inspect the current process administrative elevation state without changes."""
     require_supported_platform()
     try:
-        windll = getattr(ctypes, "windll")
+        windll = ctypes.windll
         result = windll.shell32.IsUserAnAdmin()
     except Exception as exc:
         raise PlatformInspectionError(
@@ -87,7 +86,7 @@ def _read_registry_string(subkey: str, value_name: str) -> str:
 def _get_windows_version() -> tuple[int, int, int]:
     require_supported_platform()
     try:
-        getwindowsversion = getattr(sys, "getwindowsversion")
+        getwindowsversion = sys.getwindowsversion
         version = getwindowsversion()
         major = int(version.major)
         minor = int(version.minor)
@@ -136,7 +135,7 @@ def collect_host_info() -> HostInfo:
 
     return HostInfo(
         hostname=hostname,
-        machine_id_sha256=cast(str | None, machine_id_sha256),
+        machine_id_sha256=machine_id_sha256,
         os_name=os_name,
         os_version=f"{major}.{minor}.{build}",
         os_build=str(build),

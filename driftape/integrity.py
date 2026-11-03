@@ -184,7 +184,7 @@ def serialize_baseline_manifest(
         sort_keys=True,
         separators=(",", ":"),
     )
-    return f"{text}\n".encode("utf-8")
+    return f"{text}\n".encode()
 
 
 def _manifest_string(raw: Mapping[str, object], key: str) -> str:

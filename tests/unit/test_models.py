@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError, fields
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -75,7 +75,7 @@ def _snapshot() -> Snapshot:
         schema_version="driftape.snapshot.v1",
         tool_version="0.1.0",
         snapshot_kind=SnapshotKind.BASELINE,
-        collected_at_utc=datetime(2026, 8, 24, 20, 0, 0, tzinfo=timezone.utc),
+        collected_at_utc=datetime(2026, 8, 24, 20, 0, 0, tzinfo=UTC),
         host=HostInfo(
             hostname="HOST01",
             machine_id_sha256="a" * 64,

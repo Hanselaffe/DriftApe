@@ -203,7 +203,7 @@ def _check_exact_sequence(
         if item.__class__ is not item_type:
             _fail(f"{label}: item has an unexpected concrete type")
         if hasattr(item, "id"):
-            identifier = getattr(item, "id")
+            identifier = item.id
             if identifier.__class__ is not str or identifier == "":
                 _fail(f"{label}: item identity must be non-empty text")
             ids.append(identifier)
@@ -291,7 +291,9 @@ def _check_tasks_result(result: object) -> None:
             _fail("tasks: FAILED result must not persist complete task data")
         return
     if values is None:
-        _fail("tasks: successful/partial acquisition must return its bounded task tuple")
+        _fail(
+            "tasks: successful/partial acquisition must return its bounded task tuple"
+        )
     _check_exact_sequence(
         values,
         ScheduledTaskInfo,
@@ -417,11 +419,17 @@ def test_wp14_static_production_collection_stack_is_read_only() -> None:
 
     for token in _FORBIDDEN_TOKENS:
         if token.casefold() in folded:
-            _fail("static guard found a forbidden mutation/elevation/remote-operation token")
+            _fail(
+                "static guard found a forbidden "
+                "mutation/elevation/remote-operation token"
+            )
 
     for token in _ALLOWED_READ_ONLY_TOKENS:
         if token not in combined:
-            _fail("static guard could not find an expected read-only acquisition primitive")
+            _fail(
+                "static guard could not find an expected read-only "
+                "acquisition primitive"
+            )
 
 
 def test_wp14_supported_windows_platform_and_host_identity() -> None:
@@ -459,7 +467,9 @@ def test_wp14_supported_windows_platform_and_host_identity() -> None:
             or len(fingerprint) != 64
             or any(ch not in "0123456789abcdef" for ch in fingerprint)
         ):
-            _fail("HostInfo.machine_id_sha256 is not exactly 64 lowercase hex characters")
+            _fail(
+                "HostInfo.machine_id_sha256 is not exactly 64 lowercase hex characters"
+            )
     if hasattr(host, "MachineGuid") or hasattr(host, "machine_guid"):
         _fail("HostInfo exposes a raw MachineGuid field")
 
@@ -504,7 +514,9 @@ def test_wp14_two_immediate_snapshots_and_diff() -> None:
     current_fingerprint = current.host.machine_id_sha256
     if baseline_fingerprint is not None and current_fingerprint is not None:
         if baseline_fingerprint != current_fingerprint:
-            _fail("two immediate snapshots do not satisfy local machine identity policy")
+            _fail(
+                "two immediate snapshots do not satisfy local machine identity policy"
+            )
     elif baseline.host.hostname.casefold() != current.host.hostname.casefold():
         _fail("two immediate snapshots do not satisfy local hostname identity policy")
 
@@ -520,11 +532,16 @@ def test_wp14_two_immediate_snapshots_and_diff() -> None:
         collector_name, coverage_name = _DOMAIN_COVERAGE[domain]
         baseline_collector = getattr(baseline.collectors, collector_name)
         current_collector = getattr(current.collectors, collector_name)
-        if coverage_name in baseline_collector.coverage and coverage_name in current_collector.coverage:
+        if (
+            coverage_name in baseline_collector.coverage
+            and coverage_name in current_collector.coverage
+        ):
             _fail("comparison skipped a domain that was complete in both snapshots")
 
 
-def test_wp14_cli_baseline_scan_diff_real_host(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_wp14_cli_baseline_scan_diff_real_host(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     _require_windows_11_host()
     baseline_path = tmp_path / "baseline.json"
     current_path = tmp_path / "current.json"
@@ -583,7 +600,7 @@ def test_wp14_cli_baseline_scan_diff_real_host(tmp_path: Path, capsys: pytest.Ca
     if changes_root.get("schema_version") != CHANGE_SCHEMA_VERSION:
         _fail("changes JSON root schema is not driftape.changes.v1")
 
-    if not diff_io.out.startswith("DriftApe 0.1.0\n"):
+    if not diff_io.out.startswith("DriftApe 0.2.0.dev0\n"):
         _fail("diff stdout is not the accepted human terminal summary")
     if diff_io.out.lstrip().startswith("{") or '"schema_version"' in diff_io.out:
         _fail("diff stdout contains serialized JSON")
@@ -608,7 +625,10 @@ def test_wp14_cli_overwrite_protection_is_byte_preserving(
     if main(["baseline", "--output", str(baseline_path)]) != 3:
         _fail("baseline overwrite without --force did not return exit 3")
     capsys.readouterr()
-    if baseline_path.read_bytes() != baseline_before or manifest_path.read_bytes() != manifest_before:
+    if (
+        baseline_path.read_bytes() != baseline_before
+        or manifest_path.read_bytes() != manifest_before
+    ):
         _fail("baseline overwrite protection changed existing baseline/manifest bytes")
 
     if main(["scan", "--output", str(current_path)]) not in {0, 2}:
@@ -621,23 +641,30 @@ def test_wp14_cli_overwrite_protection_is_byte_preserving(
     if current_path.read_bytes() != current_before:
         _fail("scan overwrite protection changed existing current snapshot bytes")
 
-    if main([
-        "diff",
-        str(baseline_path),
-        str(current_path),
-        "--output",
-        str(changes_path),
-    ]) not in {0, 1, 2}:
+    if main(
+        [
+            "diff",
+            str(baseline_path),
+            str(current_path),
+            "--output",
+            str(changes_path),
+        ]
+    ) not in {0, 1, 2}:
         _fail("initial diff CLI run was not usable")
     capsys.readouterr()
     changes_before = changes_path.read_bytes()
-    if main([
-        "diff",
-        str(baseline_path),
-        str(current_path),
-        "--output",
-        str(changes_path),
-    ]) != 3:
+    if (
+        main(
+            [
+                "diff",
+                str(baseline_path),
+                str(current_path),
+                "--output",
+                str(changes_path),
+            ]
+        )
+        != 3
+    ):
         _fail("diff overwrite without --force did not return exit 3")
     capsys.readouterr()
     if changes_path.read_bytes() != changes_before:

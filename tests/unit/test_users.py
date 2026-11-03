@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+
 import pytest
 
 from driftape.acquisition import powershell
@@ -201,9 +202,7 @@ def test_t_wp4_006_principal_source_mapping(
 ) -> None:
     document = _document(
         local_users=_success_section([_user(principal_source=source)]),
-        administrators=_success_section(
-            [_administrator(principal_source=source)]
-        ),
+        administrators=_success_section([_administrator(principal_source=source)]),
     )
     result = _collect(monkeypatch, document)
     assert result.data.local_users is not None
@@ -552,9 +551,7 @@ def test_t_wp4_029_object_class_must_be_non_empty_string(
     result = _collect(
         monkeypatch,
         _document(
-            administrators=_success_section(
-                [_administrator(object_class=bad_class)]
-            )
+            administrators=_success_section([_administrator(object_class=bad_class)])
         ),
     )
     assert result.data.administrators is None
@@ -583,7 +580,7 @@ def test_t_wp4_032_to_035_powershell_contract() -> None:
     assert "S-1-5-32-544" in script
     assert "Get-LocalGroupMember -SID 'S-1-5-32-544'" in script
     assert "-Group 'Administrators'" not in script
-    assert "-Group \"Administrators\"" not in script
+    assert '-Group "Administrators"' not in script
     assert "-Group 'Administratoren'" not in script
     assert "ConvertTo-Json -Compress" in script
 

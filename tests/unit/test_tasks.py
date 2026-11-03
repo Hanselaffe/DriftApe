@@ -27,8 +27,7 @@ def _xml(
     "<LogonType>InteractiveToken</LogonType><RunLevel>HighestAvailable</RunLevel>"
     "</Principal>",
     actions: str = (
-        "<Exec><Command>cmd.exe</Command>"
-        "<Arguments>/c echo hi</Arguments></Exec>"
+        "<Exec><Command>cmd.exe</Command><Arguments>/c echo hi</Arguments></Exec>"
     ),
     triggers: str = "<LogonTrigger><Enabled>true</Enabled></LogonTrigger>",
     namespace: str = _NS,
@@ -206,7 +205,7 @@ def test_t_wp6_013_to_019_principal_normalization_and_sorting(
 ) -> None:
     principals = (
         '<Principal id=" Zed "><GroupId> BUILTIN\\Users </GroupId>'
-        '<LogonType> ServiceAccount </LogonType><RunLevel> LeastPrivilege </RunLevel>'
+        "<LogonType> ServiceAccount </LogonType><RunLevel> LeastPrivilege </RunLevel>"
         "</Principal>"
         '<Principal id=" Author "><UserId> DOMAIN\\Alice </UserId>'
         "<GroupId>   </GroupId><LogonType> InteractiveToken </LogonType>"
@@ -577,7 +576,8 @@ def test_task_xml_registration_uri_does_not_override_identity(
         "<URI>\\Other\\Wrong</URI></RegistrationInfo></Task>"
     )
     result = _collect(
-        monkeypatch, _document([_item(name="Right", path="Correct", xml=xml)])
+        monkeypatch,
+        _document([_item(name="Right", path="Correct", xml=xml)]),
     )
     assert result.data.tasks is not None
     assert result.data.tasks[0].id == "\\correct\\right"

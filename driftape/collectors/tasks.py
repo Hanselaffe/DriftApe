@@ -242,10 +242,7 @@ def _canonicalize_subtree(element: ET.Element) -> str:
     try:
         serialized = ET.tostring(element, encoding="unicode")
         canonical = ET.canonicalize(
-            serialized,
-            with_comments=False,
-            strip_text=True,
-            rewrite_prefixes=True,
+            serialized, with_comments=False, strip_text=True, rewrite_prefixes=True
         )
     except (ET.ParseError, ValueError, TypeError) as exc:
         raise _TaskOutputError("Task XML canonicalization failed.") from exc
@@ -272,9 +269,7 @@ def _normalize_principals(root: ET.Element) -> tuple[TaskPrincipal, ...]:
         principals.append(
             TaskPrincipal(
                 id=principal_id,
-                user_id=_normalize_optional_text(
-                    _direct_child_text(element, "UserId")
-                ),
+                user_id=_normalize_optional_text(_direct_child_text(element, "UserId")),
                 group_id=_normalize_optional_text(
                     _direct_child_text(element, "GroupId")
                 ),
@@ -485,10 +480,10 @@ def _process_document(raw: object) -> TasksCollectorResult:
         identities.append(identity)
 
     normalized_tasks: list[ScheduledTaskInfo] = []
-    for item, identity in zip(items, identities, strict=True):
-        if identity is None:
+    for item, candidate_identity in zip(items, identities, strict=True):
+        if candidate_identity is None:
             continue
-        task_id, task_path, task_name = identity
+        task_id, task_path, task_name = candidate_identity
         assert isinstance(item, dict)
         export_ok = item.get("export_ok")
         context = _task_context(task_path, task_name)

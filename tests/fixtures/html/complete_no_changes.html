@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline';
+               base-uri 'none'; form-action 'none'">
+<title>DriftApe change report</title>
+<style>
+:root { color-scheme: light; font-family: system-ui, sans-serif; }
+body { max-width: 76rem; margin: 1.5rem auto; padding: 0 1rem; color: #17212b;
+       background: white; line-height: 1.5; }
+h1, h2, h3 { line-height: 1.2; }
+section { margin: 1.4rem 0; }
+table { width: 100%; border-collapse: collapse; margin: .7rem 0; }
+th, td { border: 1px solid #9da8b1; padding: .45rem .65rem;
+         vertical-align: top; text-align: left; overflow-wrap: anywhere; }
+th { background: #edf1f3; width: 13rem; }
+.warning { border: .2rem solid #8e3705; background: #fff2e7;
+           color: #492000; padding: 1rem; font-weight: 700; }
+.notice { border: .12rem solid #475867; padding: 1rem; }
+.record { border-top: .15rem solid #647482; padding-top: .6rem; break-inside: avoid; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font: inherit; }
+@media print {
+  body { max-width: none; margin: 0; padding: 0; color: black; }
+  .warning, .notice { background: white; color: black; }
+  th { background: white; }
+  .record { break-inside: auto; }
+}
+</style>
+</head>
+<body>
+<h1>DriftApe change report</h1>
+<section class="notice" aria-label="Handling warning">
+<h2>Security and provenance notice</h2>
+<p>This locally generated offline HTML may expose sensitive host and security information. Handle, store, and share it accordingly.</p>
+<p>The baseline SHA-256 is an integrity-reference value, not a cryptographic authenticity signature or attestation.</p>
+</section>
+<p><strong>Comparison status: COMPLETE</strong> — all seven defined domains compared; this is not a security clearance.</p>
+<section>
+<h2>Report provenance</h2>
+<table>
+<tbody>
+<tr><th scope="row">Schema version</th><td><pre>driftape.changes.v1</pre></td></tr>
+<tr><th scope="row">Original tool version</th><td><pre>0.1.0</pre></td></tr>
+<tr><th scope="row">Generated at (UTC)</th><td><pre>2026-01-15T09:31:00Z</pre></td></tr>
+<tr><th scope="row">Baseline path (label)</th><td><pre>examples/baseline.synthetic.json</pre></td></tr>
+<tr><th scope="row">Baseline collected (UTC)</th><td><pre>2026-01-15T09:00:00Z</pre></td></tr>
+<tr><th scope="row">Baseline SHA-256</th><td><pre>a02daae94446dfbfa322fe5280c7d2bf2c4eb698c2b7eed58200886549078685</pre></td></tr>
+<tr><th scope="row">Current path (label)</th><td><pre>examples/current.synthetic.json</pre></td></tr>
+<tr><th scope="row">Current collected (UTC)</th><td><pre>2026-01-15T09:30:00Z</pre></td></tr>
+<tr><th scope="row">Comparison status</th><td><pre>COMPLETE</pre></td></tr>
+</tbody>
+</table>
+</section>
+<section>
+<h2>Coverage</h2>
+<h3>Compared domains</h3>
+<ul>
+<li>users.local_users</li>
+<li>users.administrators</li>
+<li>services.services</li>
+<li>tasks.tasks</li>
+<li>defender.exclusions</li>
+<li>defender.configuration</li>
+<li>defender.runtime</li>
+</ul>
+<h3>Skipped domains</h3>
+<p>None.</p>
+</section>
+<section>
+<h2>Counts (compared domains only)</h2>
+<table>
+<tbody>
+<tr><th scope="row">Changes</th><td><pre>0</pre></td></tr>
+<tr><th scope="row">Findings</th><td><pre>0</pre></td></tr>
+<tr><th scope="row">HIGH findings</th><td><pre>0</pre></td></tr>
+<tr><th scope="row">MEDIUM findings</th><td><pre>0</pre></td></tr>
+<tr><th scope="row">LOW findings</th><td><pre>0</pre></td></tr>
+<tr><th scope="row">INFO findings</th><td><pre>0</pre></td></tr>
+</tbody>
+</table>
+</section>
+<section>
+<h2>Changes</h2>
+<p>No changes reported in compared domains.</p>
+</section>
+<section>
+<h2>Findings</h2>
+<p>No findings reported in compared domains.</p>
+</section>
+</body>
+</html>

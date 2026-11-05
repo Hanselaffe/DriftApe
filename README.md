@@ -228,3 +228,5 @@ The development build does not claim digital signatures, remote operation, Windo
 ## License
 
 DriftApe is licensed under the Apache License 2.0. See [`LICENSE`](LICENSE).
+
+Copyright 2026 Hanselaffe.

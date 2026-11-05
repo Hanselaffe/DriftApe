@@ -1,9 +1,9 @@
-name: WP5 B4 R2 Wheel CLI Verification
+name: WP5 B4 R4 Attribution and Fresh Wheel Verification
 
 on:
   push:
     branches:
-      - verify/p2-wp5-b4-r2-wheel-ci-20261105
+      - verify/p2-wp5-b4-r4-wheel-ci-20261105
 
 permissions:
   contents: read
@@ -49,6 +49,38 @@ jobs:
           print('Required sdist files present:', len(required))
           '@ | python -
           if ($LASTEXITCODE -ne 0) { throw 'sdist inventory failed' }
+      - name: Verify Apache PEP-639 metadata and license bytes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          @'
+          import pathlib, tarfile, zipfile
+          from email.parser import Parser
+          root = pathlib.Path.cwd()
+          lic = (root / 'LICENSE').read_bytes()
+          sdist = next((root / 'dist').glob('*.tar.gz'))
+          wheel = next((root / 'dist').glob('*.whl'))
+          with tarfile.open(sdist, 'r:gz') as z:
+              names = z.getnames()
+              pkg_path = next(n for n in names if n.endswith('/PKG-INFO') and n.count('/') == 1)
+              metadata_s = z.extractfile(pkg_path).read().decode('utf-8')
+              lic_path = next(n for n in names if n.endswith('/LICENSE') and n.count('/') == 1)
+              assert z.extractfile(lic_path).read() == lic
+          with zipfile.ZipFile(wheel) as z:
+              meta_path = next(n for n in z.namelist() if n.endswith('.dist-info/METADATA'))
+              metadata_w = z.read(meta_path).decode('utf-8')
+              lic_path = next(n for n in z.namelist() if n.endswith('.dist-info/licenses/LICENSE'))
+              assert z.read(lic_path) == lic
+          for source, data in [('sdist', metadata_s), ('wheel', metadata_w)]:
+              parsed = Parser().parsestr(data)
+              assert parsed['Name'] == 'driftape', (source, parsed['Name'])
+              assert parsed['Version'] == '0.2.0.dev0', (source, parsed['Version'])
+              assert parsed['License-Expression'] == 'Apache-2.0', source
+              assert 'LICENSE' in parsed.get_all('License-File', []), source
+              assert parsed['Author'] == 'Hanselaffe', source
+              print('B4 R4 metadata and LICENSE PASS:', source)
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'License metadata verification failed' }
       - name: Install built wheel in isolated clean venv
         shell: pwsh
         run: |

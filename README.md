@@ -1,14 +1,14 @@
 # DriftApe
 
-DriftApe is a local, defensive, read-only, CLI-first Windows security configuration and state drift utility.
+DriftApe is a local, defensive, CLI-first Windows security configuration and state drift utility. It reads Windows configuration without modifying that configuration; it **does** write local snapshot, manifest, JSON and HTML output files when requested.
 
-DriftApe v0.1 records a local baseline, collects a later local snapshot, verifies the baseline bytes against an adjacent SHA-256 manifest, compares the covered security-relevant state, and produces a JSON change report plus a terminal summary.
+**Development status:** the source in this repository is `0.2.0.dev0`, a development/pre-release version. A public `v0.2.0` release is **not** asserted. The frozen `v0.1` scope described below is historical; this development build also supports rendering a locally stored JSON change report as an offline HTML document using `driftape report`.
 
 DriftApe is **not** an EDR, antivirus, malware scanner, pentesting framework, or remediation tool. It does not claim to detect malware or compromise.
 
-## Frozen v0.1 scope
+## Windows inspection scope (inherited from v0.1)
 
-DriftApe v0.1 covers these local Windows data domains:
+The frozen v0.1 baseline covers these local Windows data domains:
 
 - local users
 - local Administrators membership
@@ -28,12 +28,14 @@ The v0.1 workflow provides:
 - a deterministic terminal summary
 - `baseline`, `scan`, and `diff` CLI commands
 
+The current `0.2.0.dev0` build additionally exposes the `report` CLI command for offline HTML rendering of a stored JSON change report. This is a **local report conversion**, not an HTML collection mode or a browser/web service.
+
 ## Requirements
 
-- Windows x64 (AMD64)
-- 64-bit Python 3.12 or 3.13
+- **Live collection (`baseline`, `scan`):** Windows x64 (AMD64), 64-bit Python 3.12 or 3.13.
+- **Stored-data processing (`diff`, `report`):** Python 3.12 or 3.13; these operations work from existing local files without performing Windows collection. The offline `report` path can be run on non-Windows hosts.
 
-The collection commands intentionally enforce the supported Windows x64 runtime. The package has no runtime dependencies outside the Python standard library.
+The collection commands intentionally enforce the Windows x64 runtime. The package has no runtime dependencies outside the Python standard library.
 
 DriftApe does not deliberately elevate itself. Run it with the privileges you intend to assess. Limited privileges or unavailable Windows data can result in partial collection rather than silent assumptions.
 
@@ -72,13 +74,14 @@ Later, collect a current snapshot:
 driftape scan
 ```
 
-Compare the current snapshot with the baseline:
+Compare the current snapshot with the baseline, then render its stored JSON change report as HTML:
 
 ```powershell
 driftape diff baseline.json current.json
+driftape report changes.json
 ```
 
-A successful baseline command writes both `baseline.json` and its adjacent `baseline.manifest.json`. The diff command verifies that baseline pair before comparison.
+A successful baseline command writes both `baseline.json` and its adjacent `baseline.manifest.json`. The diff command verifies that baseline pair before comparison. The `report` command consumes a **stored** JSON change report and does not collect the host again. When the diff finds changes, exit code `1` means differences were found, not a failed comparison.
 
 ## CLI commands
 
@@ -106,6 +109,22 @@ Loads and verifies the baseline pair, validates the current snapshot, checks hos
 driftape diff BASELINE CURRENT [--output PATH] [--force]
 ```
 
+### `driftape report`
+
+Validates an existing local JSON change report against the supported report schema, renders it into a standalone offline HTML document and writes that HTML locally. It neither re-runs collection nor contacts a server. The `CHANGES` argument is a **stored JSON change report** (not a current snapshot). The source JSON remains unchanged.
+
+```powershell
+driftape report CHANGES [--output PATH] [--force]
+```
+
+For a wholly synthetic, cross-platform demonstration, run from the repository root:
+
+```powershell
+driftape report examples/changes.synthetic.json --output synthetic-report.html
+```
+
+The sample's `driftape.changes.v1` schema identifier and its v0.1 scenario describe the **data format/example**, not the currently installed software version (`0.2.0.dev0`). Existing HTML paths are not overwritten without `--force`; an output path aliasing the JSON input is refused even with `--force`.
+
 ## Default output files
 
 | Command | Default output |
@@ -113,12 +132,13 @@ driftape diff BASELINE CURRENT [--output PATH] [--force]
 | `baseline` | `baseline.json` and `baseline.manifest.json` |
 | `scan` | `current.json` |
 | `diff` | `changes.json` |
+| `report` | `changes.html` |
 
 A custom baseline name derives a same-directory manifest name from that baseline path. For example, `--output gold.json` produces `gold.json` and `gold.manifest.json`.
 
 ## Overwrite and `--force`
 
-DriftApe refuses to overwrite an existing target by default. For `baseline`, this preflight applies to both the baseline and its manifest before collection begins. For `scan` and `diff`, it applies to the requested output file.
+DriftApe refuses to overwrite an existing target by default. For `baseline`, this preflight applies to both the baseline and its manifest before collection begins. For `scan`, `diff`, and `report`, it applies to the requested output file. The report command also protects its input from output-path aliases (including existing hard links and symlinks), even with `--force`.
 
 Use `--force` only when replacing the existing target is intentional:
 
@@ -128,17 +148,17 @@ driftape scan --output current.json --force
 
 ## Exit codes
 
-DriftApe v0.1 uses exit codes `0` through `8`:
+The current CLI uses the following exit codes (`report` uses `0`, `3`, `5` and `6` for its documented outcomes):
 
 | Code | Meaning |
 | ---: | --- |
-| `0` | Successful complete collection, or complete diff with no changes |
+| `0` | Successful complete collection, complete diff with no changes, or successful offline HTML report conversion |
 | `1` | Complete diff succeeded and changes were found |
 | `2` | Collection or comparison completed with partial coverage |
 | `3` | Operational, I/O, output, serialization, or internal orchestration failure |
 | `4` | Baseline SHA-256 integrity verification failed |
-| `5` | Unsupported or mismatched snapshot schema |
-| `6` | Invalid baseline manifest/snapshot, current snapshot, or diff input |
+| `5` | Unsupported or mismatched snapshot or stored change-report schema |
+| `6` | Invalid baseline manifest/snapshot, current snapshot, diff input, or stored JSON change report |
 | `7` | Baseline and current snapshots identify different hosts |
 | `8` | Unsupported collection platform/runtime |
 
@@ -152,7 +172,7 @@ When either snapshot lacks coverage for a comparison domain, that domain is skip
 
 The baseline command serializes the baseline canonically and writes an adjacent manifest containing a SHA-256 digest of the exact baseline bytes. Before a diff, DriftApe validates the manifest and baseline, verifies canonical encoding, and compares the recorded digest with the actual baseline bytes.
 
-This detects accidental or unauthorized modification when the manifest remains trustworthy. **SHA-256 does not authenticate the baseline against an attacker who can alter both the baseline and its manifest.** DriftApe v0.1 does not provide digital signatures, remote attestation, or another external trust anchor.
+This detects accidental or unauthorized modification when the manifest remains trustworthy. **SHA-256 does not authenticate the baseline against an attacker who can alter both the baseline and its manifest.** The current `0.2.0.dev0` build likewise does not provide digital signatures, remote attestation, or another external trust anchor.
 
 ## Privileges and read-only behavior
 
@@ -162,9 +182,9 @@ The process privileges determine what Windows can be collected. Running without 
 
 ## Data handling and local operation
 
-DriftApe v0.1 operates locally. It has no cloud backend, central server, remote scanning mode, database, telemetry upload, or publishing workflow.
+DriftApe processes data locally. It has no cloud backend, central server, remote scanning mode, database, telemetry upload, or publishing workflow. Offline HTML reporting does not require access to the original Windows host.
 
-Snapshots and reports can contain security-sensitive host metadata and configuration details. Store and share generated files according to your own security policy. DriftApe does not automatically redact local outputs.
+Snapshots, manifests, JSON change reports and HTML reports are **written to local files** and can contain sensitive host metadata, paths, account/group names, configuration values and security findings. Treat them as sensitive evidence: restrict access, retention and sharing according to your organization's policy. DriftApe does **not** automatically redact, encrypt or digitally sign these outputs; report rendering is not a substitute for reviewing sensitive contents before distribution.
 
 ## Synthetic examples
 
@@ -174,7 +194,7 @@ The [`examples`](examples/) directory contains an entirely synthetic baseline â†
 - `examples/current.synthetic.json`
 - `examples/changes.synthetic.json`
 
-See `examples/README.md` for the scenario and synthetic-data guarantees. The examples are demonstrations of the accepted v0.1 contracts, not evidence from a real host.
+See `examples/README.md` for the scenario and synthetic-data guarantees. The examples demonstrate the inherited v0.1 schema contracts and are not evidence from a real host or a statement of the current application version. They can also be used as offline HTML-rendering input without collecting anything from Windows.
 
 ## Development and CI
 
@@ -201,9 +221,9 @@ See [`SECURITY.md`](SECURITY.md) for supported-version and vulnerability-reporti
 
 ## Non-goals and deferred scope
 
-The frozen v0.1 release does not include HTML reporting, digital signatures, remote operation, Windows Server certification, event-log collection, Sysmon, ETW, YARA, vulnerability scanning, remediation, continuous monitoring, a background service, a database, a central server, a web UI, a cloud backend, plugins, machine learning, or LLM features.
+The historical frozen `v0.1` release did **not** have HTML reporting. The `0.2.0.dev0` development build **does** provide local, offline HTML rendering from a saved JSON change report via `driftape report`; it does not provide a web UI, live HTML collection, or an online reporting service.
 
-These exclusions are intentional for v0.1 and should not be inferred as promised future features.
+The development build does not claim digital signatures, remote operation, Windows Server certification, event-log collection, Sysmon, ETW, YARA, vulnerability scanning, remediation, continuous monitoring, a background service, a database, a central server, a web UI, a cloud backend, plugins, machine learning or LLM features. These are not promises of future delivery.
 
 ## License
 

@@ -1,0 +1,84 @@
+name: WP5 B4 R2 Wheel CLI Verification
+
+on:
+  push:
+    branches:
+      - verify/p2-wp5-b4-r2-wheel-ci-20261105
+
+permissions:
+  contents: read
+
+jobs:
+  wheel-cli:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - name: Check out candidate plus verification-only workflow
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build sdist and wheel with isolated backend
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python -m pip install "build==1.3.0"
+          if ($LASTEXITCODE -ne 0) { throw 'Install build frontend failed' }
+          python -m build --sdist --wheel --outdir dist
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
+      - name: Verify sdist packaging inventory
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sdist = Get-ChildItem -Path dist -Filter '*.tar.gz' | Select-Object -First 1
+          if (-not $sdist) { throw 'sdist not found' }
+          $env:B4_SDIST = $sdist.FullName
+          @'
+          import os,tarfile
+          with tarfile.open(os.environ['B4_SDIST'], 'r:gz') as archive:
+              paths = [m.name for m in archive.getmembers() if m.isfile()]
+          required = ['README.md','MANIFEST.in','LICENSE','SECURITY.md',
+                      'examples/README.md','examples/baseline.synthetic.json',
+                      'examples/current.synthetic.json','examples/changes.synthetic.json']
+          missing = [p for p in required if not any(n.endswith('/' + p) for n in paths)]
+          assert not missing, 'Missing sdist members: ' + repr(missing)
+          print('Required sdist files present:', len(required))
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'sdist inventory failed' }
+      - name: Install built wheel in isolated clean venv
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $venv = Join-Path $env:RUNNER_TEMP 'b4-wheel-fresh-venv'
+          python -m venv $venv
+          if ($LASTEXITCODE -ne 0) { throw 'venv creation failed' }
+          $py = Join-Path $venv 'Scripts/python.exe'
+          $wheel = Get-ChildItem -Path dist -Filter 'driftape-*.whl' | Select-Object -First 1
+          if (-not $wheel) { throw 'wheel not found' }
+          & $py -m pip install --no-deps $wheel.FullName
+          if ($LASTEXITCODE -ne 0) { throw 'wheel install failed' }
+          & $py -m pip check
+          if ($LASTEXITCODE -ne 0) { throw 'pip check failed' }
+          "B4_WHEEL_VENV=$venv" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Verify installed console executable and Golden HTML
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $env:B4_WHEEL_VENV 'Scripts/driftape.exe'
+          $python = Join-Path $env:B4_WHEEL_VENV 'Scripts/python.exe'
+          if (-not (Test-Path -LiteralPath $exe)) { throw 'Installed driftape.exe missing' }
+          & $exe --version
+          if ($LASTEXITCODE -ne 0) { throw 'Console --version failed' }
+          & $python -m driftape --version
+          if ($LASTEXITCODE -ne 0) { throw 'Module --version failed' }
+          $html = Join-Path $env:RUNNER_TEMP 'driftape-b4-golden.html'
+          & $exe report 'examples/changes.synthetic.json' --output $html
+          if ($LASTEXITCODE -ne 0) { throw 'Fresh wheel console report failed' }
+          $h = (Get-FileHash -LiteralPath $html -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($h -ne 'be50528b9f1edeb33a3749bbfb99e09bb3fdad029b96378f96e13e5555367f35') { throw "Golden HTML hash mismatch: $h" }
+          if ((Get-Item -LiteralPath $html).Length -ne 8992) { throw 'Golden HTML byte length mismatch' }
+          Write-Host "Fresh wheel console and Golden HTML verified: $h"
